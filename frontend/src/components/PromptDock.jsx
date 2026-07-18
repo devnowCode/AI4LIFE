@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { Paperclip, ArrowUp, X, FileText, Image as ImageIcon, GitCompareArrows } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { VoiceButton } from "./VoiceButton";
 
 export const PromptDock = ({
   onSubmit,
@@ -135,6 +136,11 @@ export const PromptDock = ({
             >
               <Paperclip strokeWidth={1.5} className="w-4 h-4" />
             </button>
+
+            <VoiceButton
+              onTranscribed={(t) => setText((prev) => (prev ? prev + " " : "") + t)}
+              disabled={busy}
+            />
 
             <button
               data-testid="compare-mode-toggle"

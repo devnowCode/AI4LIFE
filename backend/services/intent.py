@@ -14,14 +14,24 @@ def _load_intents() -> list[dict[str, Any]]:
 
 
 def detect_intent(prompt: str, has_files: bool = False, has_images: bool = False) -> dict[str, Any]:
-    """Return the best-matching intent with confidence and matched keywords."""
+    """Return the best-matching intent with confidence and matched keywords.
+    Multi-word keyword matches carry more weight (higher signal)."""
     intents = _load_intents()
     text = (prompt or "").lower()
     scores: dict[str, dict[str, Any]] = {}
 
     for intent in intents:
-        matched = [kw for kw in intent["keywords"] if re.search(rf"\b{re.escape(kw)}\b", text)]
-        score = len(matched) / max(len(intent["keywords"]), 1) if intent["keywords"] else 0.0
+        matched = []
+        weighted = 0.0
+        for kw in intent["keywords"]:
+            if re.search(rf"\b{re.escape(kw)}\b", text):
+                matched.append(kw)
+                # 1 word = 1 point, 2 words = 3 points, 3+ = 5 points
+                w = len(kw.split())
+                weighted += 1.0 if w == 1 else (3.0 if w == 2 else 5.0)
+        # Normalize by a soft cap so intents with few keywords aren't unfairly boosted
+        denom = max(len(intent["keywords"]), 5)
+        score = weighted / denom
         scores[intent["id"]] = {
             "label": intent["label"],
             "score": score,

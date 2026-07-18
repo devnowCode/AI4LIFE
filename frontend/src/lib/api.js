@@ -19,6 +19,17 @@ export async function orchestrate(payload) {
   return data;
 }
 
+export async function transcribe(audioBlob, language = "it") {
+  const form = new FormData();
+  form.append("audio", audioBlob, "recording.webm");
+  form.append("language", language);
+  const { data } = await axios.post(`${API}/transcribe`, form, {
+    timeout: 120000,
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return data;
+}
+
 export async function compare(payload) {
   const { data } = await api.post("/compare", payload, { timeout: 240000 });
   return data;
@@ -71,14 +82,12 @@ export async function orchestrateStream(payload, handlers) {
   const decoder = new TextDecoder();
   let buf = "";
 
-  // eslint-disable-next-line no-constant-condition
   while (true) {
     const { value, done } = await reader.read();
     if (done) break;
     buf += decoder.decode(value, { stream: true });
 
     let idx;
-    // SSE frames end with a blank line \n\n
     while ((idx = buf.indexOf("\n\n")) !== -1) {
       const frame = buf.slice(0, idx);
       buf = buf.slice(idx + 2);

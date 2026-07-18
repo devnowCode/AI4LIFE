@@ -6,8 +6,11 @@ import { ResponseCard } from "@/components/ResponseCard";
 import { CompareCard } from "@/components/CompareCard";
 import { ModelRegistry } from "@/components/ModelRegistry";
 import { Archive } from "@/components/Archive";
+import { Settings } from "@/components/Settings";
+import { StylePresets, applyStyleModifiers } from "@/components/StylePresets";
 import { fetchModels, orchestrateStream, compare, fileToBase64 } from "@/lib/api";
-import { Sparkles, Brain, Layers3, GitBranch } from "lucide-react";
+import { getWeights, getActiveStyles, setActiveStyles } from "@/lib/settings";
+import { Brain, Layers3, GitBranch } from "lucide-react";
 
 export default function Dashboard() {
   const [view, setView] = useState("chat");
@@ -21,6 +24,13 @@ export default function Dashboard() {
   // Compare mode state
   const [compareMode, setCompareMode] = useState(false);
   const [compareModels, setCompareModels] = useState(["gpt-5.2", "claude-sonnet-4.5", "gemini-3-flash"]);
+
+  // Style presets
+  const [activeStyles, setActiveStylesState] = useState(() => getActiveStyles());
+  const updateStyles = (list) => {
+    setActiveStylesState(list);
+    setActiveStyles(list);
+  };
 
   useEffect(() => {
     fetchModels().then((r) => setModels(r.models)).catch(() => {});
@@ -37,7 +47,7 @@ export default function Dashboard() {
 
   const handleLoadSession = (id, messages) => {
     setSessionId(id);
-    // Rehydrate entries from server messages
+    // Rehydrate entries from server messages (latest-first)
     const rehydrated = (messages || []).map((m) => ({
       ts: new Date(m.created_at).getTime(),
       prompt: m.prompt,
@@ -45,7 +55,7 @@ export default function Dashboard() {
       insight: m.insight,
       intent: m.intent,
       routing: { selected: m.routing_selected, candidates: [] },
-      images: [], // images not persisted in DB (would bloat)
+      images: m.images || [],
     }));
     setEntries(rehydrated.reverse());
     setView("chat");
@@ -55,6 +65,8 @@ export default function Dashboard() {
     setBusy(true);
     try {
       const filePayloads = await Promise.all(files.map(fileToBase64));
+      const weights = getWeights();
+      const finalPrompt = applyStyleModifiers(text, activeStyles);
 
       if (compareMode) {
         if (compareModels.length < 2) {
@@ -63,7 +75,7 @@ export default function Dashboard() {
           return;
         }
         const res = await compare({
-          prompt: text,
+          prompt: finalPrompt,
           model_ids: compareModels,
           files: filePayloads,
           session_id: sessionId,
@@ -73,7 +85,6 @@ export default function Dashboard() {
           ...prev,
         ]);
       } else {
-        // Streaming path
         const entryTs = Date.now();
         setEntries((prev) => [
           { ts: entryTs, prompt: text || "(solo allegati)", result: "", insight: "", intent: null, routing: null, streaming: true, images: [] },
@@ -82,10 +93,11 @@ export default function Dashboard() {
 
         await orchestrateStream(
           {
-            prompt: text,
+            prompt: finalPrompt,
             files: filePayloads,
             force_model_id: forcedModel || undefined,
             session_id: sessionId,
+            weights_override: weights,
           },
           {
             onMeta: (meta) => {
@@ -150,11 +162,13 @@ export default function Dashboard() {
           <ChatView entries={entries} busy={busy} onRework={handleRework} models={models} />
         )}
         {view === "registry" && <ModelRegistry />}
+        {view === "settings" && <Settings />}
         {view === "archive" && <Archive />}
 
         {view === "chat" && (
           <div className="sticky bottom-0 left-0 right-0 pointer-events-none">
             <div className="pointer-events-auto">
+              <StylePresets active={activeStyles} onChange={updateStyles} />
               <PromptDock
                 onSubmit={handleSubmit}
                 busy={busy}
@@ -228,6 +242,3 @@ const FeatureCard = ({ icon: Icon, title, desc }) => (
     <p className="font-body text-sm text-slate-400 mt-1">{desc}</p>
   </div>
 );
-
-// eslint-disable-next-line no-unused-vars
-const _Sparkles = Sparkles;

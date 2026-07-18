@@ -1,15 +1,18 @@
 import json
 import os
 import logging
+import tempfile
 from pathlib import Path
 from typing import Any, AsyncGenerator
 
-from fastapi import FastAPI, APIRouter, HTTPException
+from fastapi import FastAPI, APIRouter, HTTPException, UploadFile, File, Form
 from fastapi.responses import StreamingResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel, Field
+
+from emergentintegrations.llm.openai import OpenAISpeechToText
 
 from services.router import load_registry, route
 from services.intent import detect_intent
@@ -43,6 +46,7 @@ class OrchestrateRequest(BaseModel):
     files: list[FileInput] = Field(default_factory=list)
     force_model_id: str | None = None
     session_id: str | None = None
+    weights_override: dict[str, float] | None = None
 
 
 class IntentRequest(BaseModel):
@@ -60,7 +64,7 @@ class CompareRequest(BaseModel):
 
 @api_router.get("/")
 async def root() -> dict[str, Any]:
-    return {"app": "AI4LIFE", "status": "online", "version": "1.1.0"}
+    return {"app": "AI4LIFE", "status": "online", "version": "1.2.0"}
 
 
 @api_router.get("/models")
@@ -90,6 +94,7 @@ async def api_orchestrate(req: OrchestrateRequest) -> dict[str, Any]:
         files=files_payload,
         force_model_id=req.force_model_id,
         session_id=req.session_id,
+        weights_override=req.weights_override,
     )
 
 
@@ -105,6 +110,7 @@ async def api_orchestrate_stream(req: OrchestrateRequest):
             files=files_payload,
             force_model_id=req.force_model_id,
             session_id=req.session_id,
+            weights_override=req.weights_override,
         ):
             yield f"data: {json.dumps(evt, ensure_ascii=False)}\n\n".encode("utf-8")
 
@@ -152,6 +158,46 @@ async def api_session_messages(session_id: str) -> dict[str, Any]:
 async def api_delete_session(session_id: str) -> dict[str, Any]:
     deleted = await history.delete_session(session_id)
     return {"session_id": session_id, "deleted_messages": deleted}
+
+
+# -------- Voice / Whisper --------
+
+@api_router.post("/transcribe")
+async def api_transcribe(
+    audio: UploadFile = File(...),
+    language: str = Form(default="it"),
+) -> dict[str, Any]:
+    api_key = os.environ.get("EMERGENT_LLM_KEY")
+    if not api_key:
+        raise HTTPException(status_code=500, detail="EMERGENT_LLM_KEY non configurata")
+
+    # Persist to a tmp file so the SDK can read from disk
+    suffix = "." + (audio.filename or "audio.webm").rsplit(".", 1)[-1]
+    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+        content = await audio.read()
+        if len(content) > 25 * 1024 * 1024:
+            raise HTTPException(status_code=400, detail="Audio troppo grande (max 25MB)")
+        tmp.write(content)
+        tmp_path = tmp.name
+
+    try:
+        stt = OpenAISpeechToText(api_key=api_key)
+        with open(tmp_path, "rb") as fh:
+            response = await stt.transcribe(
+                file=fh,
+                model="whisper-1",
+                response_format="json",
+                language=language or "it",
+            )
+        text = getattr(response, "text", None) or ""
+        return {"text": text, "language": language}
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Whisper error: {e}") from e
+    finally:
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
 
 
 app.include_router(api_router)

@@ -170,6 +170,7 @@ async def orchestrate(
     session_id: str | None = None,
     use_history: bool = True,
     persist: bool = True,
+    weights_override: dict[str, float] | None = None,
 ) -> dict[str, Any]:
     files = files or []
     session_id = session_id or str(uuid.uuid4())
@@ -179,7 +180,7 @@ async def orchestrate(
 
     intent = detect_intent(prompt, has_files=has_files, has_images=has_images)
     routing = route(intent["intent_id"], has_files=has_files, has_images=has_images,
-                    force_model_id=force_model_id)
+                    force_model_id=force_model_id, weights_override=weights_override)
     selected = routing["selected"]
     insight = build_insight(intent, routing)
 
@@ -242,6 +243,7 @@ async def orchestrate_stream(
     files: list[dict[str, Any]] | None = None,
     force_model_id: str | None = None,
     session_id: str | None = None,
+    weights_override: dict[str, float] | None = None,
 ) -> AsyncGenerator[dict[str, Any], None]:
     """Yield SSE-friendly events. Contract:
        {"type": "meta", ...}  -> initial routing metadata
@@ -257,7 +259,7 @@ async def orchestrate_stream(
     has_files, has_images = _flags(parsed_files)
     intent = detect_intent(prompt, has_files=has_files, has_images=has_images)
     routing = route(intent["intent_id"], has_files=has_files, has_images=has_images,
-                    force_model_id=force_model_id)
+                    force_model_id=force_model_id, weights_override=weights_override)
     selected = routing["selected"]
     insight = build_insight(intent, routing)
 

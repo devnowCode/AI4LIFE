@@ -52,10 +52,11 @@ def score_model(model: dict[str, Any], intent_id: str, weights: dict[str, float]
 
 
 def route(intent_id: str, has_files: bool = False, has_images: bool = False,
-          force_model_id: str | None = None) -> dict[str, Any]:
+          force_model_id: str | None = None,
+          weights_override: dict[str, float] | None = None) -> dict[str, Any]:
     """Return the selected model and full scoring breakdown."""
     registry = load_registry()
-    weights = registry["routing_weights"]
+    weights = {**registry["routing_weights"], **(weights_override or {})}
     candidates = []
 
     for model in registry["models"]:

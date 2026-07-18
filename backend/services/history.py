@@ -33,6 +33,8 @@ async def save_turn(
 ) -> str:
     """Persist a single turn. Returns the message id."""
     mid = str(uuid.uuid4())
+    # Store the full image payloads inline (data URLs). Under Mongo 16MB doc limit
+    # for typical 1-3 images per turn.
     doc = {
         "id": mid,
         "session_id": session_id,
@@ -41,6 +43,7 @@ async def save_turn(
         "intent": intent,
         "routing_selected": routing_selected,
         "insight": insight,
+        "images": images or [],
         "has_images": bool(images),
         "num_images": len(images or []),
         "created_at": _now_iso(),
