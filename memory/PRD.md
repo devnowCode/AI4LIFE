@@ -1,46 +1,59 @@
 # AI4LIFE — Product Requirements Document
 
 ## Original Problem Statement
-Enterprise-grade AI orchestrator with intelligent semantic routing across multiple LLMs (GPT-5.2, Claude Sonnet 4.5, Gemini 3 Flash, Nano Banana, GPT-image-1). Router selects the optimal model by cross-referencing user intent with a JSON-driven model registry (capability_score, latency_index, cost_efficiency, best_use_case, weight_matrix). Three-phase pipeline: Ingestion (multimodal — text/PDF/image) → Inference (Context Injection) → Delivery (dual output: Risultato + Insight). Italian language. Clarity-First glassmorphism UI (Midnight Blue / Slate Grey / Electric Blue).
+Enterprise-grade AI orchestrator with intelligent semantic routing across multiple LLMs. Router selects optimal model by cross-referencing user intent with a JSON-driven model registry (capability_score, latency_index, cost_efficiency, weight_matrix). Three-phase pipeline: Ingestion → Inference → Delivery (Risultato + Insight). Italian language. Clarity-First glassmorphism UI (Midnight Blue / Slate Grey / Electric Blue).
 
-## Architecture
-- **Backend (FastAPI + emergentintegrations)**: `/api/models`, `/api/intent`, `/api/route`, `/api/orchestrate`. Config-driven — `config/models_registry.json` is hot-swappable, adding a model requires no code changes.
-- **Router**: pure Python, weight-matrix scoring, hard-filters image-gen intent to image-type models.
-- **Frontend (React 19 + Tailwind + shadcn)**: Dashboard shell with sidebar (Orchestratore / Model Registry / Archivio). Prompt dock at the bottom (multimodal, force-model dropdown). Response card with Risultato/Insight tabs + Quick-Action bar (Copia, Salva, Rielabora, Condividi).
-- **Persistence**: localStorage (`ai4life_archive_v1`). No auth.
+## Architecture (v1.1.0)
+- **Backend (FastAPI + emergentintegrations)**:
+  - `/api/models`, `/api/intent`, `/api/route` — config
+  - `/api/orchestrate` — non-streaming
+  - `/api/orchestrate/stream` — SSE streaming (meta → token* → done)
+  - `/api/compare` — parallel N-model comparison (2-4 models)
+  - `/api/sessions*` — Mongo-backed multi-turn session persistence
+- **Config-driven**: `config/models_registry.json` hot-swappable
+- **Frontend (React 19 + Tailwind + shadcn)**: Sidebar with Sessions panel · Chat with live streaming · Compare mode · Model Registry · Archive (localStorage)
+- **Persistence**: MongoDB (`ai4life_sessions`, `ai4life_messages`) + localStorage archive
 
 ## User Personas
-- **Enterprise Power User**: wants control + transparency (why THIS model was chosen).
-- **Professionista Multimodale**: uploads PDFs/images, expects fast, accurate answers.
+- **Enterprise Power User** — wants control + transparency (routing rationale)
+- **Professionista Multimodale** — uploads PDFs/images, wants fast accurate answers
+- **AI Benchmarker** — uses Compare Mode to evaluate model quality side-by-side
 
 ## Core Requirements (static)
-- Config-driven model registry (no code change to add model).
-- Intent detection (rule-based, low latency).
-- Semantic routing (weight matrix).
-- Multimodal ingestion (PDF via pypdf, images/text via base64 → Gemini FileContent).
-- Dual output: Risultato + Insight (technical routing log).
-- Quick-Action bar on every output.
-- Glassmorphism dark UI, Italian language.
+- Config-driven model registry
+- Intent detection (rule-based)
+- Semantic routing (weight matrix)
+- Multimodal ingestion (PDF/image/text)
+- Dual output: Risultato + Insight
+- Quick-Action bar (Copy/Save/Rework/Share)
+- SSE streaming, multi-turn context, compare mode
+- Glassmorphism dark UI, Italian language
 
-## Implemented (2026-02)
-- ✅ 5-model registry (GPT-5.2, Claude Sonnet 4.5, Gemini 3 Flash, Nano Banana, GPT-image-1)
-- ✅ Semantic router with weight matrix + intent-to-model scoring
-- ✅ Intent detection (9 intents, keyword scorer)
-- ✅ Orchestrator with 3-phase pipeline + Context Injection prompt templates
-- ✅ PDF/image/text ingestion via base64 + Gemini FileContentWithMimeType
-- ✅ Endpoints: `/api/`, `/api/models`, `/api/intent`, `/api/route`, `/api/orchestrate`
-- ✅ Dashboard UI with Sidebar / Chat / Model Registry / Archive
-- ✅ Prompt Dock (attach, force-model override, ⌘+↵ send)
-- ✅ Response Card with Risultato + Insight tabs + Quick-Action bar
-- ✅ localStorage archive with clear/remove/copy actions
-- ✅ Italian localization, Outfit/Manrope/JetBrains Mono typography, Midnight Blue palette
-- ✅ E2E tested: 14/14 backend tests pass, all frontend flows verified
+## Implemented
+### 2026-02 — v1.0.0 (MVP)
+- ✅ 5-model registry + weight-matrix router + intent detection
+- ✅ 3-phase orchestrator with Context Injection prompt templates
+- ✅ PDF/image/text ingestion via base64
+- ✅ Dashboard shell (Sidebar / Chat / Model Registry / Archive)
+- ✅ Prompt Dock (attach, force-model, ⌘+↵)
+- ✅ Response Card with Risultato/Insight tabs + Quick-Action bar
+- ✅ localStorage archive
+- ✅ Real Nano Banana image generation
+
+### 2026-02 — v1.1.0
+- ✅ **SSE token streaming** (`/api/orchestrate/stream` with fetch+ReadableStream client)
+- ✅ **Multi-turn session persistence** (MongoDB; last 4 turns injected as context)
+- ✅ **GPT-image-1 real generation** via `OpenAIImageGeneration.generate_images()`
+- ✅ **Comparison Mode** — same query → 2-4 models in parallel, side-by-side view
+- ✅ Sessions Panel in sidebar (list/load/delete)
+- ✅ Compact RouterPill variant for narrow compare cells
+- ✅ **Tests**: 29/29 pass (14 v1.0.0 + 15 v1.1.0 including real Gemini/Claude/GPT/image LLM calls)
 
 ## Backlog (P0 → P2)
-- **P0** — Real image generation (Nano Banana + GPT-image-1) — currently returns placeholder
-- **P1** — SSE streaming of LLM tokens (playbook recommends stream_message)
-- **P1** — Session history persistence (Mongo) beyond localStorage
-- **P2** — Chat context (multi-turn same-session memory beyond current session_id)
-- **P2** — Cost/latency telemetry dashboard
-- **P2** — Custom weight tuning UI (adjust routing_weights from settings)
-- **P2** — Voice input (Whisper)
+- **P2** Voice input (Whisper STT)
+- **P2** Cost/latency telemetry dashboard
+- **P2** Custom weight tuning UI (adjust routing_weights from settings)
+- **P2** Visual style presets (fotorealistico, illustration, cyberpunk…) as chips above prompt dock
+- **P2** Persist generated images in Mongo (currently only in-memory during session)
+- **P3** Migrate to FastAPI lifespan context (deprecated `on_event('shutdown')`)
+- **P3** Consolidate two Mongo clients into a single shared module

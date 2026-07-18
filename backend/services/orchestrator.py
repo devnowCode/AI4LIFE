@@ -309,6 +309,7 @@ async def orchestrate_stream(
         return
 
     result_text = "".join(full)
+    # Persist BEFORE emitting done to avoid client race on session refresh
     await history.save_turn(session_id, prompt, result_text, intent, selected, insight, [])
     yield {"type": "done", "result": result_text}
 
