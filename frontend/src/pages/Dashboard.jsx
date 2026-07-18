@@ -3,9 +3,10 @@ import { toast } from "sonner";
 import { Sidebar, MobileNav } from "@/components/Sidebar";
 import { PromptDock } from "@/components/PromptDock";
 import { ResponseCard } from "@/components/ResponseCard";
+import { CompareCard } from "@/components/CompareCard";
 import { ModelRegistry } from "@/components/ModelRegistry";
 import { Archive } from "@/components/Archive";
-import { fetchModels, orchestrate, fileToBase64 } from "@/lib/api";
+import { fetchModels, orchestrateStream, compare, fileToBase64 } from "@/lib/api";
 import { Sparkles, Brain, Layers3, GitBranch } from "lucide-react";
 
 export default function Dashboard() {
@@ -14,26 +15,111 @@ export default function Dashboard() {
   const [forcedModel, setForcedModel] = useState(null);
   const [entries, setEntries] = useState([]);
   const [busy, setBusy] = useState(false);
-  const [sessionId] = useState(() => crypto.randomUUID());
+  const [sessionId, setSessionId] = useState(() => crypto.randomUUID());
+  const [sessionsRefresh, setSessionsRefresh] = useState(0);
+
+  // Compare mode state
+  const [compareMode, setCompareMode] = useState(false);
+  const [compareModels, setCompareModels] = useState(["gpt-5.2", "claude-sonnet-4.5", "gemini-3-flash"]);
 
   useEffect(() => {
     fetchModels().then((r) => setModels(r.models)).catch(() => {});
   }, []);
 
+  const bumpSessions = () => setSessionsRefresh((n) => n + 1);
+
+  const handleNewSession = () => {
+    setSessionId(crypto.randomUUID());
+    setEntries([]);
+    setForcedModel(null);
+    setCompareMode(false);
+  };
+
+  const handleLoadSession = (id, messages) => {
+    setSessionId(id);
+    // Rehydrate entries from server messages
+    const rehydrated = (messages || []).map((m) => ({
+      ts: new Date(m.created_at).getTime(),
+      prompt: m.prompt,
+      result: m.result,
+      insight: m.insight,
+      intent: m.intent,
+      routing: { selected: m.routing_selected, candidates: [] },
+      images: [], // images not persisted in DB (would bloat)
+    }));
+    setEntries(rehydrated.reverse());
+    setView("chat");
+  };
+
   const handleSubmit = async ({ text, files }) => {
     setBusy(true);
     try {
       const filePayloads = await Promise.all(files.map(fileToBase64));
-      const res = await orchestrate({
-        prompt: text,
-        files: filePayloads,
-        force_model_id: forcedModel || undefined,
-        session_id: sessionId,
-      });
-      setEntries((prev) => [
-        { ...res, prompt: text || "(solo allegati)", ts: Date.now() },
-        ...prev,
-      ]);
+
+      if (compareMode) {
+        if (compareModels.length < 2) {
+          toast.error("Seleziona almeno 2 modelli per il confronto");
+          setBusy(false);
+          return;
+        }
+        const res = await compare({
+          prompt: text,
+          model_ids: compareModels,
+          files: filePayloads,
+          session_id: sessionId,
+        });
+        setEntries((prev) => [
+          { compare: true, prompt: text, results: res.results, ts: Date.now() },
+          ...prev,
+        ]);
+      } else {
+        // Streaming path
+        const entryTs = Date.now();
+        setEntries((prev) => [
+          { ts: entryTs, prompt: text || "(solo allegati)", result: "", insight: "", intent: null, routing: null, streaming: true, images: [] },
+          ...prev,
+        ]);
+
+        await orchestrateStream(
+          {
+            prompt: text,
+            files: filePayloads,
+            force_model_id: forcedModel || undefined,
+            session_id: sessionId,
+          },
+          {
+            onMeta: (meta) => {
+              setEntries((prev) => prev.map((e) =>
+                e.ts === entryTs
+                  ? { ...e, intent: meta.intent, routing: meta.routing, insight: meta.insight }
+                  : e
+              ));
+            },
+            onToken: (delta) => {
+              setEntries((prev) => prev.map((e) =>
+                e.ts === entryTs ? { ...e, result: (e.result || "") + delta } : e
+              ));
+            },
+            onImages: (images) => {
+              setEntries((prev) => prev.map((e) =>
+                e.ts === entryTs ? { ...e, images } : e
+              ));
+            },
+            onDone: (evt) => {
+              setEntries((prev) => prev.map((e) =>
+                e.ts === entryTs ? { ...e, streaming: false, result: evt.result || e.result } : e
+              ));
+              bumpSessions();
+            },
+            onError: (err) => {
+              toast.error("Errore stream: " + err.message);
+              setEntries((prev) => prev.map((e) =>
+                e.ts === entryTs ? { ...e, streaming: false, result: (e.result || "") + `\n\n[Errore: ${err.message}]` } : e
+              ));
+            },
+          }
+        );
+      }
     } catch (e) {
       toast.error("Errore orchestratore: " + (e?.response?.data?.detail || e.message));
     } finally {
@@ -48,7 +134,14 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen flex text-slate-100 grain relative" data-testid="dashboard">
-      <Sidebar active={view} onChange={setView} />
+      <Sidebar
+        active={view}
+        onChange={setView}
+        currentSessionId={sessionId}
+        onLoadSession={handleLoadSession}
+        onNewSession={handleNewSession}
+        sessionsRefreshKey={sessionsRefresh}
+      />
 
       <main className="flex-1 flex flex-col min-w-0 relative z-10">
         <MobileNav active={view} onChange={setView} />
@@ -68,6 +161,10 @@ export default function Dashboard() {
                 models={models}
                 forced={forcedModel}
                 onForcedChange={setForcedModel}
+                compareMode={compareMode}
+                onToggleCompare={() => setCompareMode((v) => !v)}
+                compareModels={compareModels}
+                onCompareModelsChange={setCompareModels}
               />
             </div>
           </div>
@@ -82,12 +179,14 @@ const ChatView = ({ entries, busy, onRework, models }) => (
     <div className="max-w-4xl mx-auto px-4 md:px-8 pt-10 pb-4">
       {entries.length === 0 && !busy && <EmptyState models={models} />}
 
-      {busy && <RoutingSkeleton />}
-
       <div className="space-y-6">
-        {entries.map((entry) => (
-          <ResponseCard key={entry.ts} entry={entry} onRework={onRework} />
-        ))}
+        {entries.map((entry) =>
+          entry.compare ? (
+            <CompareCard key={entry.ts} prompt={entry.prompt} results={entry.results} />
+          ) : (
+            <ResponseCard key={entry.ts} entry={entry} onRework={onRework} />
+          )
+        )}
       </div>
     </div>
   </div>
@@ -103,13 +202,13 @@ const EmptyState = ({ models }) => (
     </h1>
     <p className="font-body text-slate-400 mt-6 max-w-xl leading-relaxed">
       AI4LIFE analizza l&apos;intento, incrocia una matrice di pesi e instrada la richiesta
-      al modello più adatto — restituendo Risultato + Insight tecnico.
+      al modello più adatto — restituendo Risultato + Insight tecnico in streaming.
     </p>
 
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-10">
       <FeatureCard icon={Brain} title="Intent Recognition" desc="Analisi semantica del prompt in tempo reale." />
       <FeatureCard icon={GitBranch} title="Semantic Routing" desc="Matrice di pesi capability × latency × cost." />
-      <FeatureCard icon={Layers3} title="Dual Output" desc="Risultato leggibile + Insight tecnico di routing." />
+      <FeatureCard icon={Layers3} title="Dual Output + Compare" desc="Risultato, Insight tecnico, e Comparison Mode." />
     </div>
 
     <div className="mt-10 flex flex-wrap gap-2">
@@ -130,16 +229,5 @@ const FeatureCard = ({ icon: Icon, title, desc }) => (
   </div>
 );
 
-const RoutingSkeleton = () => (
-  <div className="glass-heavy rounded-2xl p-6 mb-6 fade-up" data-testid="routing-skeleton">
-    <div className="flex items-center gap-3 mb-4">
-      <Sparkles className="w-4 h-4 text-sky-400 beam" />
-      <p className="font-mono text-xs uppercase tracking-widest text-sky-300">Routing in corso…</p>
-    </div>
-    <div className="space-y-2">
-      <div className="h-2 rounded bg-slate-800/70 w-3/4 animate-pulse" />
-      <div className="h-2 rounded bg-slate-800/70 w-full animate-pulse" />
-      <div className="h-2 rounded bg-slate-800/70 w-5/6 animate-pulse" />
-    </div>
-  </div>
-);
+// eslint-disable-next-line no-unused-vars
+const _Sparkles = Sparkles;

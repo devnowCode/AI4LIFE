@@ -5,7 +5,6 @@ import { toast } from "sonner";
 import { saveToArchive } from "@/lib/storage";
 
 const Markdown = ({ text }) => {
-  // Ultra-lightweight rendering: preserve line breaks + code fences visually.
   if (!text) return null;
   const parts = String(text).split(/(```[\s\S]*?```)/g);
   return (
@@ -37,7 +36,7 @@ export const ResponseCard = ({ entry, onRework }) => {
   const [copied, setCopied] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  const { intent, routing, result, insight, prompt } = entry;
+  const { intent, routing, result, insight, prompt, streaming, images } = entry;
   const selected = routing?.selected;
 
   const copy = async () => {
@@ -48,7 +47,7 @@ export const ResponseCard = ({ entry, onRework }) => {
   };
 
   const save = () => {
-    saveToArchive({ prompt, result, insight, selected, intent });
+    saveToArchive({ prompt, result, insight, selected, intent, images });
     setSaved(true);
     toast.success("Salvato nell'Archivio");
     setTimeout(() => setSaved(false), 1500);
@@ -71,31 +70,34 @@ export const ResponseCard = ({ entry, onRework }) => {
       data-testid="response-card"
       className="glass-heavy rounded-2xl overflow-hidden fade-up"
     >
-      {/* Header: prompt echo + routing pill */}
       <header className="px-6 pt-5 pb-4 border-b border-slate-800/60">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0 flex-1">
             <p className="font-mono text-[10px] uppercase tracking-widest text-slate-500 mb-1">Richiesta</p>
             <p className="font-body text-slate-300 text-sm line-clamp-2">{prompt || "(solo allegati)"}</p>
           </div>
-          <RouterPill selected={selected} />
+          {selected && <RouterPill selected={selected} />}
         </div>
       </header>
 
-      {/* Tabs */}
       <div className="px-6 pt-4">
         <div className="inline-flex items-center gap-1 rounded-lg bg-slate-900/60 border border-slate-800 p-1">
           <TabBtn active={tab === "result"} onClick={() => setTab("result")} icon={Sparkles} label="Risultato" testid="tab-result" />
           <TabBtn active={tab === "insight"} onClick={() => setTab("insight")} icon={Terminal} label="Insight" testid="tab-insight" />
+          {streaming && (
+            <span className="ml-2 inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-sky-500/10 border border-sky-500/25 text-[10px] font-mono uppercase tracking-widest text-sky-300">
+              <span className="w-1.5 h-1.5 rounded-full bg-sky-400 beam" /> Streaming
+            </span>
+          )}
         </div>
       </div>
 
       <div className="px-6 py-5 min-h-[100px]">
         {tab === "result" ? (
           <>
-            {entry.images && entry.images.length > 0 && (
+            {images && images.length > 0 && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4" data-testid="generated-images">
-                {entry.images.map((img, i) => (
+                {images.map((img, i) => (
                   <a
                     key={i}
                     href={img.data_url}
@@ -109,23 +111,25 @@ export const ResponseCard = ({ entry, onRework }) => {
               </div>
             )}
             <Markdown text={result} />
+            {streaming && (
+              <span className="inline-block w-2 h-4 ml-0.5 bg-sky-400 animate-pulse align-middle" />
+            )}
           </>
         ) : (
           <pre
             data-testid="insight-content"
             className="font-mono text-xs text-sky-200/90 bg-slate-950/60 border border-slate-800 rounded-lg p-5 overflow-x-auto leading-relaxed whitespace-pre-wrap"
           >
-            {insight}
+            {insight || "In attesa del routing…"}
           </pre>
         )}
       </div>
 
-      {/* Quick Action Bar */}
       <footer className="px-4 py-3 border-t border-slate-800/60 flex flex-wrap items-center justify-end gap-1 bg-slate-950/40">
-        <QuickAction icon={copied ? Check : Copy} label="Copia" onClick={copy} testid="action-copy" active={copied} />
-        <QuickAction icon={saved ? Check : Save} label="Salva" onClick={save} testid="action-save" active={saved} />
-        <QuickAction icon={RefreshCw} label="Rielabora" onClick={() => onRework?.(entry)} testid="action-rework" />
-        <QuickAction icon={Share2} label="Condividi" onClick={share} testid="action-share" />
+        <QuickAction icon={copied ? Check : Copy} label="Copia" onClick={copy} testid="action-copy" active={copied} disabled={streaming} />
+        <QuickAction icon={saved ? Check : Save} label="Salva" onClick={save} testid="action-save" active={saved} disabled={streaming} />
+        <QuickAction icon={RefreshCw} label="Rielabora" onClick={() => onRework?.(entry)} testid="action-rework" disabled={streaming} />
+        <QuickAction icon={Share2} label="Condividi" onClick={share} testid="action-share" disabled={streaming} />
       </footer>
     </article>
   );
@@ -144,11 +148,12 @@ const TabBtn = ({ active, onClick, icon: Icon, label, testid }) => (
   </button>
 );
 
-const QuickAction = ({ icon: Icon, label, onClick, testid, active }) => (
+const QuickAction = ({ icon: Icon, label, onClick, testid, active, disabled }) => (
   <button
     data-testid={testid}
     onClick={onClick}
-    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-body transition-colors ${
+    disabled={disabled}
+    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-body transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
       active ? "text-sky-300 bg-sky-500/10" : "text-slate-400 hover:text-slate-100 hover:bg-slate-800/60"
     }`}
   >

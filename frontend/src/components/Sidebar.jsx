@@ -1,5 +1,6 @@
 import { Layers, MessagesSquare, Archive, Database, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { SessionsPanel } from "./SessionsPanel";
 
 const NAV = [
   { id: "chat", label: "Orchestratore", icon: MessagesSquare, testid: "nav-chat" },
@@ -7,7 +8,7 @@ const NAV = [
   { id: "archive", label: "Archivio", icon: Archive, testid: "nav-archive" },
 ];
 
-export const Sidebar = ({ active, onChange }) => {
+export const Sidebar = ({ active, onChange, currentSessionId, onLoadSession, onNewSession, sessionsRefreshKey }) => {
   return (
     <aside
       data-testid="sidebar"
@@ -28,7 +29,7 @@ export const Sidebar = ({ active, onChange }) => {
         </div>
       </div>
 
-      <nav className="px-3 flex-1 space-y-1">
+      <nav className="px-3 space-y-1">
         {NAV.map((item) => {
           const Icon = item.icon;
           const isActive = active === item.id;
@@ -51,6 +52,15 @@ export const Sidebar = ({ active, onChange }) => {
           );
         })}
       </nav>
+
+      <div className="mt-4 flex-1 min-h-0 border-t border-slate-800/60 pt-3 overflow-hidden">
+        <SessionsPanel
+          currentSessionId={currentSessionId}
+          onLoadSession={onLoadSession}
+          onNewSession={onNewSession}
+          refreshKey={sessionsRefreshKey}
+        />
+      </div>
 
       <div className="p-4 mt-auto">
         <div className="glass rounded-xl p-3 flex items-center gap-3">

@@ -6,7 +6,7 @@ export const API = `${BACKEND_URL}/api`;
 export const api = axios.create({
   baseURL: API,
   headers: { "Content-Type": "application/json" },
-  timeout: 120000,
+  timeout: 180000,
 });
 
 export async function fetchModels() {
@@ -14,17 +14,28 @@ export async function fetchModels() {
   return data;
 }
 
-export async function detectRoute(prompt, hasFiles, hasImages) {
-  const { data } = await api.post("/route", {
-    prompt,
-    has_files: hasFiles,
-    has_images: hasImages,
-  });
+export async function orchestrate(payload) {
+  const { data } = await api.post("/orchestrate", payload, { timeout: 240000 });
   return data;
 }
 
-export async function orchestrate(payload) {
-  const { data } = await api.post("/orchestrate", payload, { timeout: 180000 });
+export async function compare(payload) {
+  const { data } = await api.post("/compare", payload, { timeout: 240000 });
+  return data;
+}
+
+export async function listSessions() {
+  const { data } = await api.get("/sessions");
+  return data.sessions;
+}
+
+export async function getSessionMessages(sessionId) {
+  const { data } = await api.get(`/sessions/${sessionId}/messages`);
+  return data.messages;
+}
+
+export async function deleteSession(sessionId) {
+  const { data } = await api.delete(`/sessions/${sessionId}`);
   return data;
 }
 
@@ -38,4 +49,50 @@ export function fileToBase64(file) {
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
+}
+
+/**
+ * Stream tokens from /api/orchestrate/stream via fetch + ReadableStream.
+ * @param {Object} payload - { prompt, files, force_model_id, session_id }
+ * @param {Object} handlers - { onMeta, onToken, onImages, onDone, onError }
+ */
+export async function orchestrateStream(payload, handlers) {
+  const { onMeta, onToken, onImages, onDone, onError } = handlers || {};
+  const res = await fetch(`${API}/orchestrate/stream`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok || !res.body) {
+    onError?.(new Error(`HTTP ${res.status}`));
+    return;
+  }
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = "";
+
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+
+    let idx;
+    // SSE frames end with a blank line \n\n
+    while ((idx = buf.indexOf("\n\n")) !== -1) {
+      const frame = buf.slice(0, idx);
+      buf = buf.slice(idx + 2);
+      const line = frame.split("\n").find((l) => l.startsWith("data:"));
+      if (!line) continue;
+      const raw = line.slice(5).trim();
+      if (!raw) continue;
+      let evt;
+      try { evt = JSON.parse(raw); } catch { continue; }
+      if (evt.type === "meta") onMeta?.(evt);
+      else if (evt.type === "token") onToken?.(evt.delta);
+      else if (evt.type === "images") onImages?.(evt.images);
+      else if (evt.type === "done") onDone?.(evt);
+      else if (evt.type === "error") onError?.(new Error(evt.message));
+    }
+  }
 }
