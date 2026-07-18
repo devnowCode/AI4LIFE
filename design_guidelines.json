@@ -1,0 +1,100 @@
+{
+  "typography": {
+    "headings": {
+      "family": "Outfit",
+      "weights": "font-[700] to font-black",
+      "tracking": "tracking-tight",
+      "usage": "Use for Model names, headers in the sidebar, and main section titles."
+    },
+    "body": {
+      "family": "Manrope",
+      "weights": "font-light to font-medium",
+      "tracking": "tracking-normal",
+      "usage": "Use for standard AI responses (Risultato) and general UI text."
+    },
+    "monospace": {
+      "family": "JetBrains Mono",
+      "weights": "font-normal",
+      "tracking": "tracking-tight",
+      "usage": "Use exclusively for the 'Insight' panel, latency_index, capability_score, and routing logs."
+    },
+    "instructions": "Avoid Inter/Roboto for headings. Keep hierarchy strict. Jump no more than 2 steps (e.g., text-3xl to text-lg)."
+  },
+  "colors": {
+    "background": "bg-slate-950 (Midnight Blue base tinted with slate)",
+    "surfaces": {
+      "glass": "bg-slate-900/60 backdrop-blur-xl backdrop-saturate-150",
+      "inset": "bg-slate-950/80 shadow-inner",
+      "solid": "bg-slate-900"
+    },
+    "primary": "text-sky-400 or bg-sky-500",
+    "accents": "Electric Blue (sky-400 to blue-500). Use selectively for the active AI model indicator and primary send action.",
+    "borders": "border-slate-800/50 for subtle separation, border-sky-500/30 for active/focus states.",
+    "text": {
+      "primary": "text-slate-100",
+      "secondary": "text-slate-400",
+      "muted": "text-slate-500",
+      "insight": "text-sky-300"
+    }
+  },
+  "visual_enhancers": {
+    "glassmorphism": "Apply Optical Clarity: backdrop-blur-xl combined with backdrop-saturate-150 and a 1px border-white/5 top inner stroke.",
+    "borders": "Never use solid high-contrast borders unless for the tracing beam effect on active models. Rely on elevation and soft borders.",
+    "shadows": "Deep ambient shadows (shadow-[0_8px_32px_rgba(0,0,0,0.5)]) for floating elements like the prompt input area.",
+    "animations": "No visible loading spinners (BANNED). Use elegant skeleton sweeps or 'typing' text fade-ins. Use transition-colors duration-300 ease-out for hover states."
+  },
+  "component_name": {
+    "chat_input": "Multimodal Input Area. Floating glassmorphic dock at the bottom of the screen. Must include paperclip icon for PDF/Image upload. Must look heavy and anchored.",
+    "model_router": "Intent Detection UI. A sleek, horizontal status pill showing 'Routing to GPT-4o...'. Display capability_score, latency_index, and cost_efficiency as micro-badges next to it.",
+    "response_panel": "Dual-Output Panel. Top half: 'Risultato' (clear, readable text). Bottom/Side half: 'Insight' (technical explanation of routing choice, monospaced, tinted dark blue background).",
+    "quick_actions": "Quick-Action Bar containing: Copia, Salva in Archivio, Rielabora, Condividi. These should be subtle ghost buttons (hover:bg-slate-800) aligned to the bottom right of every output.",
+    "archive_registry": "Model Registry & Archive View. Dense, technical grid layout. Use subtle borders (border-b border-slate-800). No heavy cards; go cardless/rectangular."
+  },
+  "grids": {
+    "desktop": "grid-cols-12 gap-6. Sidebar spans 3 cols, Main Chat spans 9 cols. Inside Main Chat, Responses max-w-4xl.",
+    "mobile": "grid-cols-1. Stacked layout.",
+    "bento_rules": "For the Model Registry, use dense data correlation layout. Every pixel utilized. h-full for children."
+  },
+  "layouts": {
+    "dashboard": "Single-page AI orchestrator. Sidebar on the left (fixed), main scrolling chat area on the right. Input fixed to bottom of chat area.",
+    "spacing": "Generous spacing: p-6 or p-8 inside primary response panels to give text breathing room."
+  },
+  "motion": {
+    "hover": "Hover states must have higher contrast than default. Elements lift (-translate-y-1) with a soft shadow.",
+    "transitions": "Use specific properties: transition-transform duration-200, transition-colors duration-200. Do not use transition-all indiscriminately."
+  },
+  "accessibility": {
+    "contrast": "Ensure text over glassmorphism meets 4.5:1 ratio. Text colors must be explicitly set on hover (e.g., hover:text-white).",
+    "focus": "focus:ring-1 focus:ring-sky-500 focus:outline-none.",
+    "data_testid": "ALL interactive elements MUST include data-testid (e.g., data-testid='send-prompt-btn', data-testid='action-copy')."
+  },
+  "media": {
+    "icons": "Use lucide-react. Stroke width 1.5 for a technical, crisp look."
+  },
+  "image_urls": {
+    "abstract_ai_background": {
+      "url": "https://images.unsplash.com/photo-1758073519996-6d3c63b4922c?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMzN8MHwxfHNlYXJjaHw0fHxhYnN0cmFjdCUyMGJsdWUlMjBuZXVyYWwlMjBuZXR3b3JrJTIwdGVjaG5vbG9neXxlbnwwfHx8fDE3ODQ0MDYxMzl8MA&ixlib=rb-4.1.0&q=85",
+      "description": "Abstract blue glowing dots forming wave patterns",
+      "category": "background",
+      "instructions": "Use as a very low opacity (opacity-5 or opacity-10) fixed background image or in the empty state of the chat to signify 'The Intelligent Orchestrator'."
+    },
+    "user_avatar": {
+      "url": "https://images.unsplash.com/photo-1764545973653-94c40d993495?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1NzZ8MHwxfHNlYXJjaHwyfHxwcm9mZXNzaW9uYWwlMjBhdmF0YXIlMjBwb3J0cmFpdCUyMGRhcmslMjBiYWNrZ3JvdW5kfGVufDB8fHx8MTc4NDQwNjEzOXww&ixlib=rb-4.1.0&q=85",
+      "description": "A smiling man with arms crossed against black background",
+      "category": "avatar",
+      "instructions": "Use for the logged-in enterprise user avatar in the bottom of the sidebar."
+    }
+  },
+  "3d_libraries": {
+    "strategy": "Avoid heavy 3D rendering for the core chat interface to maintain performance (latency_index is critical). Use CSS gradients and glassmorphism exclusively for depth."
+  },
+  "instructions_to_main_agent": [
+    "Language MUST be Italian for all UI text (Risultato, Insight, Copia, Salva in Archivio, Rielabora, Condividi).",
+    "Implement 'Clarity-First' design: No cluttered borders, use optical alignment.",
+    "Build a pure dark mode UI using Midnight Blue and Slate Grey backgrounds, with Electric Blue accents for active states.",
+    "For the Quick-Action bar, ensure it appears attached to every response payload as small icon+text glass pills.",
+    "Model Registry should be built as a dense, cardless table view or list view using standard HTML elements styled via Tailwind.",
+    "DO NOT use pure transparent backgrounds for any overlays or dropdowns; always use glassmorphism (bg-slate-900/60 + backdrop-blur) or a solid dark color."
+  ],
+  "UNIVERSAL_GUIDELINES_FOR_MAIN_AGENT": "Avoid generic 'AI slop' aesthetics. Do not center-align the main app container. Use layered depth (z-index) and glassmorphism (backdrop-blur-xl with backdrop-saturate-150). Do not use 'transition: all'. Apply distinct typography for 'Risultato' (Standard reading layout using Manrope) and 'Insight' (Technical/Monospace log layout using JetBrains Mono) to communicate professional control and computational power. Always include data-testid on interactable elements. Never use AI emoji characters for icons; rely strictly on lucide-react."
+}
