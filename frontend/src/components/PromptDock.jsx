@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Paperclip, ArrowUp, X, FileText, Image as ImageIcon, GitCompareArrows } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { VoiceButton } from "./VoiceButton";
@@ -13,10 +13,20 @@ export const PromptDock = ({
   onToggleCompare,
   compareModels,
   onCompareModelsChange,
+  pendingPrompt,
+  onPendingConsumed,
 }) => {
   const [text, setText] = useState("");
   const [files, setFiles] = useState([]);
   const fileRef = useRef(null);
+
+  // When a recipe is applied, replace the prompt input
+  useEffect(() => {
+    if (pendingPrompt != null) {
+      setText(pendingPrompt);
+      onPendingConsumed?.();
+    }
+  }, [pendingPrompt, onPendingConsumed]);
 
   const handleFiles = (list) => {
     const arr = Array.from(list || []).slice(0, 5);

@@ -2,6 +2,7 @@ import json
 import os
 import logging
 import tempfile
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, AsyncGenerator
 
@@ -9,11 +10,11 @@ from fastapi import FastAPI, APIRouter, HTTPException, UploadFile, File, Form
 from fastapi.responses import StreamingResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
-from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel, Field
 
 from emergentintegrations.llm.openai import OpenAISpeechToText
 
+from services.db import close_db
 from services.router import load_registry, route
 from services.intent import detect_intent
 from services.orchestrator import (
@@ -21,17 +22,20 @@ from services.orchestrator import (
     orchestrate_stream,
     orchestrate_compare,
 )
-from services import history
+from services import history, telemetry
 
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / ".env")
 
-mongo_url = os.environ["MONGO_URL"]
-client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ["DB_NAME"]]
 
-app = FastAPI(title="AI4LIFE Orchestrator API")
+@asynccontextmanager
+async def lifespan(app: FastAPI):  # noqa: ARG001
+    yield
+    await close_db()
+
+
+app = FastAPI(title="AI4LIFE Orchestrator API", lifespan=lifespan)
 api_router = APIRouter(prefix="/api")
 
 
@@ -64,12 +68,18 @@ class CompareRequest(BaseModel):
 
 @api_router.get("/")
 async def root() -> dict[str, Any]:
-    return {"app": "AI4LIFE", "status": "online", "version": "1.2.0"}
+    return {"app": "AI4LIFE", "status": "online", "version": "1.3.0"}
 
 
 @api_router.get("/models")
 async def get_models() -> dict[str, Any]:
     return load_registry()
+
+
+@api_router.get("/recipes")
+async def get_recipes() -> dict[str, Any]:
+    with open(ROOT_DIR / "config" / "recipes.json", "r", encoding="utf-8") as f:
+        return json.load(f)
 
 
 @api_router.post("/intent")
@@ -160,6 +170,13 @@ async def api_delete_session(session_id: str) -> dict[str, Any]:
     return {"session_id": session_id, "deleted_messages": deleted}
 
 
+# -------- Telemetry --------
+
+@api_router.get("/telemetry")
+async def api_telemetry() -> dict[str, Any]:
+    return await telemetry.get_summary()
+
+
 # -------- Voice / Whisper --------
 
 @api_router.post("/transcribe")
@@ -173,11 +190,9 @@ async def api_transcribe(
 
     MAX_BYTES = 25 * 1024 * 1024
 
-    # Early size guard using content-length when available
     if audio.size is not None and audio.size > MAX_BYTES:
         raise HTTPException(status_code=413, detail="Audio troppo grande (max 25MB)")
 
-    # Stream-read with a hard cap to avoid buffering unbounded payloads
     total = 0
     chunks: list[bytes] = []
     while True:
@@ -232,8 +247,3 @@ app.add_middleware(
 logging.basicConfig(level=logging.INFO,
                     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger("ai4life")
-
-
-@app.on_event("shutdown")
-async def shutdown_db_client():
-    client.close()

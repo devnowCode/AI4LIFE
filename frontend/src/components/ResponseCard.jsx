@@ -36,7 +36,7 @@ export const ResponseCard = ({ entry, onRework }) => {
   const [copied, setCopied] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  const { intent, routing, result, insight, prompt, streaming, images } = entry;
+  const { intent, routing, result, insight, prompt, streaming, images, costEur, latencyMs } = entry;
   const selected = routing?.selected;
 
   const copy = async () => {
@@ -76,7 +76,7 @@ export const ResponseCard = ({ entry, onRework }) => {
             <p className="font-mono text-[10px] uppercase tracking-widest text-slate-500 mb-1">Richiesta</p>
             <p className="font-body text-slate-300 text-sm line-clamp-2">{prompt || "(solo allegati)"}</p>
           </div>
-          {selected && <RouterPill selected={selected} />}
+          {selected && <RouterPill selected={selected} costEur={costEur} latencyMs={latencyMs} />}
         </div>
       </header>
 

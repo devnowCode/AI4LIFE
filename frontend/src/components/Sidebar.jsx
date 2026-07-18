@@ -1,9 +1,10 @@
-import { Layers, MessagesSquare, Archive, Database, Zap, Settings as SettingsIcon } from "lucide-react";
+import { Layers, MessagesSquare, Archive, Database, Zap, Settings as SettingsIcon, Activity } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SessionsPanel } from "./SessionsPanel";
 
 const NAV = [
   { id: "chat", label: "Orchestratore", icon: MessagesSquare, testid: "nav-chat" },
+  { id: "telemetry", label: "Telemetry", icon: Activity, testid: "nav-telemetry" },
   { id: "registry", label: "Model Registry", icon: Database, testid: "nav-registry" },
   { id: "settings", label: "Weights", icon: SettingsIcon, testid: "nav-settings" },
   { id: "archive", label: "Archivio", icon: Archive, testid: "nav-archive" },

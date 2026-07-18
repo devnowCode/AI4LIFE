@@ -14,16 +14,28 @@ export const VoiceButton = ({ onTranscribed, disabled }) => {
 
   const start = async () => {
     if (disabled || busy) return;
+    // Capability sniffing for older browsers (Safari <14.1, etc.)
+    if (typeof window === "undefined"
+        || !navigator.mediaDevices?.getUserMedia
+        || typeof window.MediaRecorder === "undefined") {
+      toast.error("Registrazione audio non supportata da questo browser");
+      return;
+    }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const rec = new MediaRecorder(stream, { mimeType: "audio/webm" });
+      const mimeType = MediaRecorder.isTypeSupported("audio/webm")
+        ? "audio/webm"
+        : (MediaRecorder.isTypeSupported("audio/mp4") ? "audio/mp4" : "");
+      const rec = mimeType
+        ? new MediaRecorder(stream, { mimeType })
+        : new MediaRecorder(stream);
       chunksRef.current = [];
       rec.ondataavailable = (e) => {
         if (e.data && e.data.size > 0) chunksRef.current.push(e.data);
       };
       rec.onstop = async () => {
         stream.getTracks().forEach((t) => t.stop());
-        const blob = new Blob(chunksRef.current, { type: "audio/webm" });
+        const blob = new Blob(chunksRef.current, { type: mimeType || "audio/webm" });
         setBusy(true);
         try {
           const { text } = await transcribe(blob, "it");

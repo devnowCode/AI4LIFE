@@ -13,6 +13,8 @@
       "capability_score": 96,
       "latency_index": 72,
       "cost_efficiency": 68,
+      "cost_per_1k_output_tokens_eur": 0.0135,
+      "cost_per_image_eur": 0.0,
       "context_window": 200000,
       "best_use_case": ["reasoning", "code", "structured_output", "analysis"],
       "tagline": "Ragionamento profondo e codice preciso",
@@ -39,6 +41,8 @@
       "capability_score": 94,
       "latency_index": 78,
       "cost_efficiency": 74,
+      "cost_per_1k_output_tokens_eur": 0.011,
+      "cost_per_image_eur": 0.0,
       "context_window": 200000,
       "best_use_case": ["writing", "creative", "long_form", "reasoning"],
       "tagline": "Scrittura raffinata e ragionamento nuanced",
@@ -91,6 +95,8 @@
       "capability_score": 92,
       "latency_index": 84,
       "cost_efficiency": 88,
+      "cost_per_1k_output_tokens_eur": 0.0,
+      "cost_per_image_eur": 0.003,
       "context_window": 0,
       "best_use_case": ["image_generation", "photorealistic", "creative_visual"],
       "tagline": "Generazione immagini fotorealistica",
@@ -117,6 +123,8 @@
       "capability_score": 90,
       "latency_index": 70,
       "cost_efficiency": 65,
+      "cost_per_1k_output_tokens_eur": 0.0,
+      "cost_per_image_eur": 0.038,
       "context_window": 0,
       "best_use_case": ["image_generation", "illustration", "design"],
       "tagline": "Illustrazioni e design creativo (coming soon)",
@@ -140,3 +148,4 @@
     "context_bonus": 0.10
   }
 }
+

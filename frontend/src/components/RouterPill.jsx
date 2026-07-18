@@ -1,6 +1,7 @@
 import { Cpu, Zap, DollarSign, Target } from "lucide-react";
+import { CostBadge } from "./CostBadge";
 
-export const RouterPill = ({ selected, compact = false }) => {
+export const RouterPill = ({ selected, compact = false, costEur, latencyMs }) => {
   if (!selected) return null;
   return (
     <div
@@ -15,10 +16,11 @@ export const RouterPill = ({ selected, compact = false }) => {
 
       {!compact && <span className="hidden sm:inline w-px h-4 bg-slate-800 mx-1" />}
 
-      <div className={`flex items-center gap-1 ${compact ? "w-full mt-1 pl-3" : ""}`}>
+      <div className={`flex items-center gap-1 flex-wrap ${compact ? "w-full mt-1 pl-3" : ""}`}>
         <Badge icon={Target} label="cap" value={selected.capability_score} compact={compact} />
         <Badge icon={Zap} label="lat" value={selected.latency_index} compact={compact} />
         <Badge icon={DollarSign} label="cost" value={selected.cost_efficiency} compact={compact} />
+        {costEur != null && <CostBadge costEur={costEur} latencyMs={latencyMs} compact={compact} />}
       </div>
     </div>
   );

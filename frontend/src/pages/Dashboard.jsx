@@ -7,7 +7,9 @@ import { CompareCard } from "@/components/CompareCard";
 import { ModelRegistry } from "@/components/ModelRegistry";
 import { Archive } from "@/components/Archive";
 import { Settings } from "@/components/Settings";
+import { Telemetry } from "@/components/Telemetry";
 import { StylePresets, applyStyleModifiers } from "@/components/StylePresets";
+import { RecipesStrip } from "@/components/RecipesStrip";
 import { fetchModels, orchestrateStream, compare, fileToBase64 } from "@/lib/api";
 import { getWeights, getActiveStyles, setActiveStyles } from "@/lib/settings";
 import { Brain, Layers3, GitBranch } from "lucide-react";
@@ -30,6 +32,19 @@ export default function Dashboard() {
   const updateStyles = (list) => {
     setActiveStylesState(list);
     setActiveStyles(list);
+  };
+
+  // Recipes: when applied, we set active recipe id + fill prompt via a controlled prop
+  const [activeRecipeId, setActiveRecipeId] = useState(null);
+  const [pendingPrompt, setPendingPrompt] = useState(null);
+  const [pendingWeightsOverride, setPendingWeightsOverride] = useState(null);
+
+  const applyRecipe = (recipe) => {
+    setActiveRecipeId(recipe.id);
+    setPendingPrompt(recipe.template);
+    if (recipe.styles && recipe.styles.length) updateStyles(recipe.styles);
+    if (recipe.weights_hint) setPendingWeightsOverride(recipe.weights_hint);
+    toast.success(`Ricetta applicata: ${recipe.label}`);
   };
 
   useEffect(() => {
@@ -63,9 +78,12 @@ export default function Dashboard() {
 
   const handleSubmit = async ({ text, files }) => {
     setBusy(true);
+    // Prefer recipe weight hint if just applied, else settings weights
+    const weights = pendingWeightsOverride || getWeights();
+    setPendingWeightsOverride(null);
+    setActiveRecipeId(null);
     try {
       const filePayloads = await Promise.all(files.map(fileToBase64));
-      const weights = getWeights();
       const finalPrompt = applyStyleModifiers(text, activeStyles);
 
       if (compareMode) {
@@ -119,7 +137,9 @@ export default function Dashboard() {
             },
             onDone: (evt) => {
               setEntries((prev) => prev.map((e) =>
-                e.ts === entryTs ? { ...e, streaming: false, result: evt.result || e.result } : e
+                e.ts === entryTs
+                  ? { ...e, streaming: false, result: evt.result || e.result, costEur: evt.cost_estimate_eur, latencyMs: evt.latency_ms }
+                  : e
               ));
               bumpSessions();
             },
@@ -163,11 +183,13 @@ export default function Dashboard() {
         )}
         {view === "registry" && <ModelRegistry />}
         {view === "settings" && <Settings />}
+        {view === "telemetry" && <Telemetry />}
         {view === "archive" && <Archive />}
 
         {view === "chat" && (
           <div className="sticky bottom-0 left-0 right-0 pointer-events-none">
             <div className="pointer-events-auto">
+              <RecipesStrip onApply={applyRecipe} activeRecipeId={activeRecipeId} />
               <StylePresets active={activeStyles} onChange={updateStyles} />
               <PromptDock
                 onSubmit={handleSubmit}
@@ -179,6 +201,8 @@ export default function Dashboard() {
                 onToggleCompare={() => setCompareMode((v) => !v)}
                 compareModels={compareModels}
                 onCompareModelsChange={setCompareModels}
+                pendingPrompt={pendingPrompt}
+                onPendingConsumed={() => setPendingPrompt(null)}
               />
             </div>
           </div>

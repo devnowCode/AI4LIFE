@@ -1,0 +1,78 @@
+{
+  "version": "1.0.0",
+  "description": "AI4LIFE Prompt Recipe Library — one-click templates that pre-set prompt template + style presets + weight preferences.",
+  "recipes": [
+    {
+      "id": "analyze-contract",
+      "label": "Analizza contratto",
+      "icon": "FileSearch",
+      "category": "Business",
+      "template": "Analizza il contratto allegato ed estrai:\n1. Parti coinvolte\n2. Obblighi principali\n3. Clausole di rescissione\n4. Rischi legali/finanziari\n5. Raccomandazioni pratiche\n\nUsa un tono professionale e cita le sezioni pertinenti.",
+      "styles": [],
+      "weights_hint": {"capability": 0.70, "latency": 0.10, "cost": 0.10, "context_bonus": 0.10}
+    },
+    {
+      "id": "summarize-paper",
+      "label": "Riassumi paper accademico",
+      "icon": "GraduationCap",
+      "category": "Research",
+      "template": "Riassumi il paper accademico in italiano con questa struttura:\n\n**Obiettivo** · **Metodologia** · **Risultati chiave** · **Limitazioni** · **Implicazioni pratiche**\n\nMantieni le citazioni chiave e i valori numerici rilevanti.",
+      "styles": [],
+      "weights_hint": {"capability": 0.55, "latency": 0.15, "cost": 0.20, "context_bonus": 0.10}
+    },
+    {
+      "id": "cyberpunk-moodboard",
+      "label": "Moodboard cyberpunk",
+      "icon": "Cpu",
+      "category": "Creative",
+      "template": "Genera immagine di una scena cyberpunk: strada notturna piovosa con insegne al neon, riflessi sull'asfalto bagnato, atmosfera densa e cinematografica.",
+      "styles": ["cyberpunk", "photorealistic"],
+      "weights_hint": {"capability": 0.40, "latency": 0.20, "cost": 0.30, "context_bonus": 0.10}
+    },
+    {
+      "id": "code-review",
+      "label": "Code Review",
+      "icon": "Code2",
+      "category": "Engineering",
+      "template": "Fai una code review approfondita del codice qui sotto. Fornisci:\n1. Sintesi di sicurezza\n2. Bug potenziali con severity (P0/P1/P2)\n3. Ottimizzazioni di performance\n4. Miglioramenti di leggibilità\n5. Test suggeriti\n\n[Incolla il codice qui]",
+      "styles": [],
+      "weights_hint": {"capability": 0.80, "latency": 0.05, "cost": 0.05, "context_bonus": 0.10}
+    },
+    {
+      "id": "translate-professional",
+      "label": "Traduzione professionale",
+      "icon": "Languages",
+      "category": "Business",
+      "template": "Traduci il testo seguente in [inglese/italiano]. Mantieni tono formale professionale, adatta idiomi e sfumature culturali, preserva la formattazione originale.\n\n[Testo]:",
+      "styles": [],
+      "weights_hint": {"capability": 0.30, "latency": 0.40, "cost": 0.20, "context_bonus": 0.10}
+    },
+    {
+      "id": "brainstorm-ideas",
+      "label": "Brainstorm creativo",
+      "icon": "Lightbulb",
+      "category": "Creative",
+      "template": "Facciamo brainstorming su [inserisci topic]. Genera 10 idee originali e non convenzionali. Per ognuna: titolo (max 5 parole), descrizione (2 righe), livello di rischio (basso/medio/alto), effort stimato.",
+      "styles": [],
+      "weights_hint": {"capability": 0.50, "latency": 0.20, "cost": 0.20, "context_bonus": 0.10}
+    },
+    {
+      "id": "luxury-product-shot",
+      "label": "Product shot luxury",
+      "icon": "Gem",
+      "category": "Creative",
+      "template": "Genera immagine di [prodotto], product shot in stile editoriale luxury: sfondo minimale monocromatico, illuminazione soft studio, materiale premium in evidenza, angolo 3/4.",
+      "styles": ["luxury", "photorealistic"],
+      "weights_hint": {"capability": 0.50, "latency": 0.15, "cost": 0.25, "context_bonus": 0.10}
+    },
+    {
+      "id": "meeting-minutes",
+      "label": "Verbale meeting",
+      "icon": "ClipboardList",
+      "category": "Business",
+      "template": "Trasforma i seguenti appunti in un verbale meeting professionale:\n\n**Data** · **Partecipanti** · **Ordine del giorno** · **Decisioni prese** · **Action items (con owner + deadline)** · **Prossimi passi**\n\n[Appunti]:",
+      "styles": [],
+      "weights_hint": {"capability": 0.45, "latency": 0.25, "cost": 0.20, "context_bonus": 0.10}
+    }
+  ]
+}

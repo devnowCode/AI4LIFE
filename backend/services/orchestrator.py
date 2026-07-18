@@ -1,9 +1,11 @@
 """Orchestrator: 3-phase pipeline with streaming, multi-turn history,
-image generation (Nano Banana + GPT-image-1) and parallel compare mode."""
+image generation (Nano Banana + GPT-image-1), parallel compare mode,
+and per-turn cost/latency telemetry."""
 from __future__ import annotations
 import asyncio
 import base64
 import os
+import time
 import uuid
 from typing import Any, AsyncGenerator
 
@@ -21,6 +23,7 @@ from .intent import detect_intent
 from .router import route, build_insight, load_registry
 from .parser import parse_file
 from . import history
+from . import telemetry
 
 SYSTEM_MESSAGE = (
     "Sei un assistente AI professionale integrato in AI4LIFE, un orchestratore "
@@ -184,9 +187,16 @@ async def orchestrate(
     selected = routing["selected"]
     insight = build_insight(intent, routing)
 
+    # Look up the full registry entry to get pricing (weight_matrix section only has scores)
+    registry = load_registry()
+    full_model = next((m for m in registry["models"] if m["id"] == selected["id"]), selected)
+
     # Image gen branch
     if selected["type"] == "image":
+        t0 = time.perf_counter()
         text_out, images = await _run_image_gen(selected, prompt, parsed_files, session_id)
+        latency_ms = int((time.perf_counter() - t0) * 1000)
+        cost = telemetry.estimate_cost_eur(full_model, text_out, num_images=len(images))
         payload = {
             "session_id": session_id,
             "intent": intent,
@@ -194,10 +204,16 @@ async def orchestrate(
             "result": text_out,
             "images": images,
             "insight": insight,
+            "cost_estimate_eur": cost,
+            "latency_ms": latency_ms,
             "files": [{"name": pf.get("name"), "kind": pf.get("kind"), "size_bytes": pf.get("size_bytes", 0)} for pf in parsed_files],
         }
         if persist:
-            await history.save_turn(session_id, prompt, text_out, intent, selected, insight, images)
+            await history.save_turn(session_id, prompt, text_out, intent, selected, insight, images,
+                                    cost_estimate_eur=cost, latency_ms=latency_ms)
+            await telemetry.log_turn(session_id, selected["id"], selected["display_name"],
+                                     intent["intent_id"], latency_ms, cost, num_images=len(images),
+                                     output_len=len(text_out))
         return payload
 
     # Text branch
@@ -218,9 +234,14 @@ async def orchestrate(
     user_message = UserMessage(text=prompt_final, file_contents=file_contents or None)
 
     try:
+        t0 = time.perf_counter()
         response_text = await chat.send_message(user_message)
+        latency_ms = int((time.perf_counter() - t0) * 1000)
     except Exception as e:
         response_text = f"[Errore inference: {e}]"
+        latency_ms = 0
+
+    cost = telemetry.estimate_cost_eur(full_model, response_text)
 
     payload = {
         "session_id": session_id,
@@ -229,10 +250,16 @@ async def orchestrate(
         "result": response_text,
         "images": [],
         "insight": insight,
+        "cost_estimate_eur": cost,
+        "latency_ms": latency_ms,
         "files": [{"name": pf.get("name"), "kind": pf.get("kind"), "size_bytes": pf.get("size_bytes", 0)} for pf in parsed_files],
     }
     if persist:
-        await history.save_turn(session_id, prompt, response_text, intent, selected, insight, [])
+        await history.save_turn(session_id, prompt, response_text, intent, selected, insight, [],
+                                cost_estimate_eur=cost, latency_ms=latency_ms)
+        await telemetry.log_turn(session_id, selected["id"], selected["display_name"],
+                                 intent["intent_id"], latency_ms, cost,
+                                 output_len=len(response_text))
     return payload
 
 
@@ -262,6 +289,8 @@ async def orchestrate_stream(
                     force_model_id=force_model_id, weights_override=weights_override)
     selected = routing["selected"]
     insight = build_insight(intent, routing)
+    registry = load_registry()
+    full_model = next((m for m in registry["models"] if m["id"] == selected["id"]), selected)
 
     yield {
         "type": "meta",
@@ -273,12 +302,19 @@ async def orchestrate_stream(
 
     # Image branch: non-streaming, deliver as one event
     if selected["type"] == "image":
+        t0 = time.perf_counter()
         text_out, images = await _run_image_gen(selected, prompt, parsed_files, session_id)
+        latency_ms = int((time.perf_counter() - t0) * 1000)
+        cost = telemetry.estimate_cost_eur(full_model, text_out, num_images=len(images))
         yield {"type": "images", "images": images}
         if text_out:
             yield {"type": "token", "delta": text_out}
-        await history.save_turn(session_id, prompt, text_out, intent, selected, insight, images)
-        yield {"type": "done", "result": text_out}
+        await history.save_turn(session_id, prompt, text_out, intent, selected, insight, images,
+                                cost_estimate_eur=cost, latency_ms=latency_ms)
+        await telemetry.log_turn(session_id, selected["id"], selected["display_name"],
+                                 intent["intent_id"], latency_ms, cost, num_images=len(images),
+                                 output_len=len(text_out))
+        yield {"type": "done", "result": text_out, "cost_estimate_eur": cost, "latency_ms": latency_ms}
         return
 
     # Text streaming branch
@@ -299,6 +335,7 @@ async def orchestrate_stream(
     user_message = UserMessage(text=prompt_final, file_contents=file_contents or None)
 
     full = []
+    t0 = time.perf_counter()
     try:
         async for ev in chat.stream_message(user_message):
             if isinstance(ev, TextDelta):
@@ -309,11 +346,15 @@ async def orchestrate_stream(
     except Exception as e:
         yield {"type": "error", "message": str(e)}
         return
+    latency_ms = int((time.perf_counter() - t0) * 1000)
 
     result_text = "".join(full)
-    # Persist BEFORE emitting done to avoid client race on session refresh
-    await history.save_turn(session_id, prompt, result_text, intent, selected, insight, [])
-    yield {"type": "done", "result": result_text}
+    cost = telemetry.estimate_cost_eur(full_model, result_text)
+    await history.save_turn(session_id, prompt, result_text, intent, selected, insight, [],
+                            cost_estimate_eur=cost, latency_ms=latency_ms)
+    await telemetry.log_turn(session_id, selected["id"], selected["display_name"],
+                             intent["intent_id"], latency_ms, cost, output_len=len(result_text))
+    yield {"type": "done", "result": result_text, "cost_estimate_eur": cost, "latency_ms": latency_ms}
 
 
 # -------- Compare mode --------

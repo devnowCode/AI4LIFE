@@ -56,7 +56,7 @@ const CompareCell = ({ cell, isLast }) => {
       className={`p-5 border-t md:border-t-0 border-slate-800/60 ${!isLast ? "md:border-r" : ""}`}
     >
       <div className="mb-3">
-        <RouterPill selected={selected} compact />
+        <RouterPill selected={selected} compact costEur={response.cost_estimate_eur} latencyMs={response.latency_ms} />
       </div>
       {hasImages && (
         <div className="mb-3 space-y-2">
