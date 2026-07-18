@@ -92,7 +92,24 @@ export const ResponseCard = ({ entry, onRework }) => {
 
       <div className="px-6 py-5 min-h-[100px]">
         {tab === "result" ? (
-          <Markdown text={result} />
+          <>
+            {entry.images && entry.images.length > 0 && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4" data-testid="generated-images">
+                {entry.images.map((img, i) => (
+                  <a
+                    key={i}
+                    href={img.data_url}
+                    download={`ai4life-${i}.png`}
+                    className="block rounded-xl overflow-hidden border border-slate-800 hover:border-sky-500/50 transition-colors"
+                    data-testid={`generated-image-${i}`}
+                  >
+                    <img src={img.data_url} alt={`Generated ${i}`} className="w-full h-auto object-cover" />
+                  </a>
+                ))}
+              </div>
+            )}
+            <Markdown text={result} />
+          </>
         ) : (
           <pre
             data-testid="insight-content"

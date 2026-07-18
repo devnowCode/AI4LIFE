@@ -84,7 +84,7 @@
       "id": "nano-banana",
       "display_name": "Nano Banana",
       "provider": "gemini",
-      "model_name": "gemini-2.5-flash-image",
+      "model_name": "gemini-3.1-flash-image-preview",
       "type": "image",
       "supports_files": false,
       "supports_images": true,
@@ -119,7 +119,7 @@
       "cost_efficiency": 65,
       "context_window": 0,
       "best_use_case": ["image_generation", "illustration", "design"],
-      "tagline": "Illustrazioni e design creativo",
+      "tagline": "Illustrazioni e design creativo (coming soon)",
       "weight_matrix": {
         "reasoning": 0.0,
         "code": 0.0,
@@ -129,7 +129,7 @@
         "translation": 0.0,
         "multimodal": 0.0,
         "quick_qa": 0.0,
-        "image_generation": 0.92
+        "image_generation": 0.80
       }
     }
   ],

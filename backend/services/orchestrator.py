@@ -9,6 +9,7 @@ from emergentintegrations.llm.chat import (
     LlmChat,
     UserMessage,
     FileContentWithMimeType,
+    ImageContent,
 )
 
 from .intent import detect_intent
@@ -77,20 +78,63 @@ async def orchestrate(prompt: str, files: list[dict[str, Any]] | None = None,
                     force_model_id=force_model_id)
     selected = routing["selected"]
 
-    # Guardrail: MVP does not generate images yet — inform the user gracefully
+    # Guardrail: image generation via Gemini Nano Banana. Other image providers
+    # not yet wired — fall back to Nano Banana automatically.
     if selected["type"] == "image":
+        api_key = os.environ.get("EMERGENT_LLM_KEY")
+        if not api_key:
+            raise RuntimeError("EMERGENT_LLM_KEY non configurata")
+
+        # Force Nano Banana if a different image provider was picked
+        image_model_name = "gemini-3.1-flash-image-preview"
+        image_provider = "gemini"
+        fallback_note = ""
+        if selected["provider"] != "gemini":
+            fallback_note = (
+                f"\n\n> ℹ️ Il router aveva selezionato **{selected['display_name']}**, "
+                f"ma l'endpoint non è ancora attivo. Fallback automatico su **Nano Banana**."
+            )
+
+        chat = LlmChat(
+            api_key=api_key,
+            session_id=session_id,
+            system_message="You generate high quality images.",
+        ).with_model(image_provider, image_model_name).with_params(modalities=["image", "text"])
+
+        # If the user attached reference images, forward them for image editing
+        ref_images = []
+        for pf in parsed_files:
+            if pf.get("kind") == "image" and pf.get("path"):
+                try:
+                    import base64
+                    with open(pf["path"], "rb") as fh:
+                        ref_images.append(ImageContent(base64.b64encode(fh.read()).decode("utf-8")))
+                except Exception:
+                    pass
+
+        msg = UserMessage(text=prompt or "Genera un'immagine.", file_contents=ref_images or None)
+        try:
+            text_out, images_out = await chat.send_message_multimodal_response(msg)
+        except Exception as e:
+            text_out, images_out = (f"[Errore image gen: {e}]", [])
+
         insight = build_insight(intent, routing)
+        image_payload = []
+        for img in (images_out or []):
+            image_payload.append({
+                "mime_type": img.get("mime_type", "image/png"),
+                "data_url": f"data:{img.get('mime_type', 'image/png')};base64,{img.get('data', '')}",
+            })
+
+        result_text = (text_out or "").strip() or "Immagine generata."
+        result_text += fallback_note
+
         return {
             "session_id": session_id,
             "intent": intent,
             "routing": routing,
-            "result": (
-                f"**Modello selezionato: {selected['display_name']}**  \n"
-                f"Il routing ha identificato una richiesta di generazione immagine. "
-                f"L'orchestratore ha instradato correttamente la richiesta al modello ottimale.  \n\n"
-                f"> ⚡ La generazione immagini via *{selected['display_name']}* sarà attivata "
-                f"nel prossimo iteration. Il routing engine funziona correttamente."
-            ),
+            "result": result_text,
+            "images": image_payload,
             "insight": insight,
             "files": [{"name": pf.get("name"), "kind": pf.get("kind"), "size_bytes": pf.get("size_bytes", 0)} for pf in parsed_files],
         }
