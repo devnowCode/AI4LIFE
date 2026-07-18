@@ -1,0 +1,142 @@
+{
+  "version": "1.0.0",
+  "description": "AI4LIFE Model Registry - Dynamic model selection matrix. Add new models by appending an entry; the router picks them up automatically.",
+  "models": [
+    {
+      "id": "gpt-5.2",
+      "display_name": "GPT-5.2",
+      "provider": "openai",
+      "model_name": "gpt-5.2",
+      "type": "text",
+      "supports_files": false,
+      "supports_images": true,
+      "capability_score": 96,
+      "latency_index": 72,
+      "cost_efficiency": 68,
+      "context_window": 200000,
+      "best_use_case": ["reasoning", "code", "structured_output", "analysis"],
+      "tagline": "Ragionamento profondo e codice preciso",
+      "weight_matrix": {
+        "reasoning": 0.98,
+        "code": 0.97,
+        "analysis": 0.94,
+        "creative": 0.82,
+        "summarization": 0.88,
+        "translation": 0.85,
+        "multimodal": 0.75,
+        "quick_qa": 0.80,
+        "image_generation": 0.0
+      }
+    },
+    {
+      "id": "claude-sonnet-4.5",
+      "display_name": "Claude Sonnet 4.5",
+      "provider": "anthropic",
+      "model_name": "claude-sonnet-4-5-20250929",
+      "type": "text",
+      "supports_files": false,
+      "supports_images": true,
+      "capability_score": 94,
+      "latency_index": 78,
+      "cost_efficiency": 74,
+      "context_window": 200000,
+      "best_use_case": ["writing", "creative", "long_form", "reasoning"],
+      "tagline": "Scrittura raffinata e ragionamento nuanced",
+      "weight_matrix": {
+        "reasoning": 0.95,
+        "code": 0.90,
+        "analysis": 0.92,
+        "creative": 0.97,
+        "summarization": 0.94,
+        "translation": 0.90,
+        "multimodal": 0.72,
+        "quick_qa": 0.82,
+        "image_generation": 0.0
+      }
+    },
+    {
+      "id": "gemini-3-flash",
+      "display_name": "Gemini 3 Flash",
+      "provider": "gemini",
+      "model_name": "gemini-3-flash-preview",
+      "type": "text",
+      "supports_files": true,
+      "supports_images": true,
+      "capability_score": 88,
+      "latency_index": 96,
+      "cost_efficiency": 95,
+      "context_window": 1000000,
+      "best_use_case": ["multimodal", "pdf_analysis", "quick_qa", "translation"],
+      "tagline": "Ultra-veloce, multimodale, ottimo per file",
+      "weight_matrix": {
+        "reasoning": 0.85,
+        "code": 0.84,
+        "analysis": 0.88,
+        "creative": 0.80,
+        "summarization": 0.90,
+        "translation": 0.93,
+        "multimodal": 0.98,
+        "quick_qa": 0.95,
+        "image_generation": 0.0
+      }
+    },
+    {
+      "id": "nano-banana",
+      "display_name": "Nano Banana",
+      "provider": "gemini",
+      "model_name": "gemini-2.5-flash-image",
+      "type": "image",
+      "supports_files": false,
+      "supports_images": true,
+      "capability_score": 92,
+      "latency_index": 84,
+      "cost_efficiency": 88,
+      "context_window": 0,
+      "best_use_case": ["image_generation", "photorealistic", "creative_visual"],
+      "tagline": "Generazione immagini fotorealistica",
+      "weight_matrix": {
+        "reasoning": 0.0,
+        "code": 0.0,
+        "analysis": 0.0,
+        "creative": 0.60,
+        "summarization": 0.0,
+        "translation": 0.0,
+        "multimodal": 0.0,
+        "quick_qa": 0.0,
+        "image_generation": 0.96
+      }
+    },
+    {
+      "id": "gpt-image-1",
+      "display_name": "GPT Image 1",
+      "provider": "openai",
+      "model_name": "gpt-image-1",
+      "type": "image",
+      "supports_files": false,
+      "supports_images": true,
+      "capability_score": 90,
+      "latency_index": 70,
+      "cost_efficiency": 65,
+      "context_window": 0,
+      "best_use_case": ["image_generation", "illustration", "design"],
+      "tagline": "Illustrazioni e design creativo",
+      "weight_matrix": {
+        "reasoning": 0.0,
+        "code": 0.0,
+        "analysis": 0.0,
+        "creative": 0.55,
+        "summarization": 0.0,
+        "translation": 0.0,
+        "multimodal": 0.0,
+        "quick_qa": 0.0,
+        "image_generation": 0.92
+      }
+    }
+  ],
+  "routing_weights": {
+    "capability": 0.55,
+    "latency": 0.20,
+    "cost": 0.15,
+    "context_bonus": 0.10
+  }
+}

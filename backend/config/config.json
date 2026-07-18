@@ -1,0 +1,31 @@
+{
+  "app": {
+    "name": "AI4LIFE",
+    "tagline": "The Intelligent Orchestrator",
+    "language": "it",
+    "version": "1.0.0"
+  },
+  "orchestrator": {
+    "default_system_message": "Sei un assistente AI professionale integrato in AI4LIFE, un orchestratore intelligente di modelli. Rispondi in italiano, con precisione e chiarezza enterprise. Formatta le risposte in markdown quando utile.",
+    "max_file_size_mb": 20,
+    "max_files_per_request": 5,
+    "supported_mime_types": [
+      "application/pdf",
+      "image/png",
+      "image/jpeg",
+      "image/webp",
+      "text/plain"
+    ]
+  },
+  "intents": [
+    {"id": "code", "label": "Codice", "keywords": ["codice", "code", "python", "javascript", "funzione", "function", "class", "debug", "compila", "algoritmo", "typescript", "react", "api"]},
+    {"id": "reasoning", "label": "Ragionamento", "keywords": ["perché", "spiega", "analizza", "logica", "dimostra", "reason", "argomenta", "confronta", "valuta"]},
+    {"id": "creative", "label": "Creativo", "keywords": ["scrivi", "racconto", "storia", "poesia", "creativo", "brainstorm", "idea", "narrazione", "slogan", "creativa"]},
+    {"id": "summarization", "label": "Sintesi", "keywords": ["riassumi", "sintetizza", "summary", "tldr", "riassunto", "punti chiave", "estrai"]},
+    {"id": "translation", "label": "Traduzione", "keywords": ["traduci", "translate", "traduzione", "in inglese", "in italiano", "in francese", "in spagnolo"]},
+    {"id": "analysis", "label": "Analisi", "keywords": ["analisi", "analizza", "dati", "grafico", "tabella", "insight", "correla", "trend", "statistica"]},
+    {"id": "multimodal", "label": "Multimodale", "keywords": ["immagine", "foto", "pdf", "documento", "file", "allegato", "descrivi immagine"]},
+    {"id": "image_generation", "label": "Generazione Immagine", "keywords": ["genera immagine", "crea immagine", "disegna", "illustra", "immagine di", "foto di", "genera un", "crea una foto"]},
+    {"id": "quick_qa", "label": "Q&A Rapido", "keywords": []}
+  ]
+}

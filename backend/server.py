@@ -1,88 +1,101 @@
-from fastapi import FastAPI, APIRouter
+from fastapi import FastAPI, APIRouter, HTTPException
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
 from pathlib import Path
-from pydantic import BaseModel, Field, ConfigDict
-from typing import List
-import uuid
-from datetime import datetime, timezone
+from pydantic import BaseModel, Field
+from typing import Any
+
+from services.router import load_registry, route
+from services.intent import detect_intent
+from services.orchestrator import orchestrate
 
 
 ROOT_DIR = Path(__file__).parent
-load_dotenv(ROOT_DIR / '.env')
+load_dotenv(ROOT_DIR / ".env")
 
-# MongoDB connection
-mongo_url = os.environ['MONGO_URL']
+mongo_url = os.environ["MONGO_URL"]
 client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME']]
+db = client[os.environ["DB_NAME"]]
 
-# Create the main app without a prefix
-app = FastAPI()
-
-# Create a router with the /api prefix
+app = FastAPI(title="AI4LIFE Orchestrator API")
 api_router = APIRouter(prefix="/api")
 
 
-# Define Models
-class StatusCheck(BaseModel):
-    model_config = ConfigDict(extra="ignore")  # Ignore MongoDB's _id field
-    
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    client_name: str
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+class FileInput(BaseModel):
+    name: str
+    content_b64: str
+    mime: str | None = None
 
-class StatusCheckCreate(BaseModel):
-    client_name: str
 
-# Add your routes to the router instead of directly to app
+class OrchestrateRequest(BaseModel):
+    prompt: str = Field(default="")
+    files: list[FileInput] = Field(default_factory=list)
+    force_model_id: str | None = None
+    session_id: str | None = None
+
+
+class IntentRequest(BaseModel):
+    prompt: str
+    has_files: bool = False
+    has_images: bool = False
+
+
 @api_router.get("/")
-async def root():
-    return {"message": "Hello World"}
+async def root() -> dict[str, Any]:
+    return {"app": "AI4LIFE", "status": "online", "version": "1.0.0"}
 
-@api_router.post("/status", response_model=StatusCheck)
-async def create_status_check(input: StatusCheckCreate):
-    status_dict = input.model_dump()
-    status_obj = StatusCheck(**status_dict)
-    
-    # Convert to dict and serialize datetime to ISO string for MongoDB
-    doc = status_obj.model_dump()
-    doc['timestamp'] = doc['timestamp'].isoformat()
-    
-    _ = await db.status_checks.insert_one(doc)
-    return status_obj
 
-@api_router.get("/status", response_model=List[StatusCheck])
-async def get_status_checks():
-    # Exclude MongoDB's _id field from the query results
-    status_checks = await db.status_checks.find({}, {"_id": 0}).to_list(1000)
-    
-    # Convert ISO string timestamps back to datetime objects
-    for check in status_checks:
-        if isinstance(check['timestamp'], str):
-            check['timestamp'] = datetime.fromisoformat(check['timestamp'])
-    
-    return status_checks
+@api_router.get("/models")
+async def get_models() -> dict[str, Any]:
+    """Return the full model registry — used to render the Model Registry UI."""
+    return load_registry()
 
-# Include the router in the main app
+
+@api_router.post("/intent")
+async def api_detect_intent(req: IntentRequest) -> dict[str, Any]:
+    return detect_intent(req.prompt, has_files=req.has_files, has_images=req.has_images)
+
+
+@api_router.post("/route")
+async def api_route(req: IntentRequest) -> dict[str, Any]:
+    intent = detect_intent(req.prompt, has_files=req.has_files, has_images=req.has_images)
+    routing = route(intent["intent_id"], has_files=req.has_files, has_images=req.has_images)
+    return {"intent": intent, "routing": routing}
+
+
+@api_router.post("/orchestrate")
+async def api_orchestrate(req: OrchestrateRequest) -> dict[str, Any]:
+    if not req.prompt and not req.files:
+        raise HTTPException(status_code=400, detail="Prompt o file obbligatori")
+    files_payload = [f.model_dump() for f in req.files]
+    result = await orchestrate(
+        prompt=req.prompt,
+        files=files_payload,
+        force_model_id=req.force_model_id,
+        session_id=req.session_id,
+    )
+    return result
+
+
 app.include_router(api_router)
 
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
+    allow_origins=os.environ.get("CORS_ORIGINS", "*").split(","),
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Configure logging
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("ai4life")
+
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
