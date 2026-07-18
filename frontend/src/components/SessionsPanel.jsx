@@ -52,11 +52,11 @@ export const SessionsPanel = ({ currentSessionId, onLoadSession, onNewSession, r
           <p className="px-2 py-3 font-body text-xs text-slate-600">Nessuna sessione ancora.</p>
         )}
         {sessions.map((s) => (
-          <button
+          <div
             key={s.id}
             data-testid={`session-${s.id}`}
             onClick={() => openSession(s.id)}
-            className={`group w-full text-left px-2.5 py-2 rounded-md transition-colors border ${
+            className={`group w-full text-left px-2.5 py-2 rounded-md transition-colors border cursor-pointer ${
               s.id === currentSessionId
                 ? "bg-sky-500/10 border-sky-500/25 text-slate-100"
                 : "border-transparent hover:bg-slate-800/40 text-slate-400"
@@ -72,6 +72,7 @@ export const SessionsPanel = ({ currentSessionId, onLoadSession, onNewSession, r
                 </p>
               </div>
               <button
+                data-testid={`delete-session-${s.id}`}
                 onClick={(e) => remove(s.id, e)}
                 className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-rose-500/10 text-slate-500 hover:text-rose-300 transition-all"
                 title="Elimina"
@@ -79,7 +80,7 @@ export const SessionsPanel = ({ currentSessionId, onLoadSession, onNewSession, r
                 <Trash2 className="w-3 h-3" strokeWidth={1.5} />
               </button>
             </div>
-          </button>
+          </div>
         ))}
       </div>
     </div>

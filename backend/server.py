@@ -171,16 +171,32 @@ async def api_transcribe(
     if not api_key:
         raise HTTPException(status_code=500, detail="EMERGENT_LLM_KEY non configurata")
 
-    # Persist to a tmp file so the SDK can read from disk
-    suffix = "." + (audio.filename or "audio.webm").rsplit(".", 1)[-1]
-    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-        content = await audio.read()
-        if len(content) > 25 * 1024 * 1024:
-            raise HTTPException(status_code=400, detail="Audio troppo grande (max 25MB)")
-        tmp.write(content)
-        tmp_path = tmp.name
+    MAX_BYTES = 25 * 1024 * 1024
 
+    # Early size guard using content-length when available
+    if audio.size is not None and audio.size > MAX_BYTES:
+        raise HTTPException(status_code=413, detail="Audio troppo grande (max 25MB)")
+
+    # Stream-read with a hard cap to avoid buffering unbounded payloads
+    total = 0
+    chunks: list[bytes] = []
+    while True:
+        chunk = await audio.read(1024 * 1024)
+        if not chunk:
+            break
+        total += len(chunk)
+        if total > MAX_BYTES:
+            raise HTTPException(status_code=413, detail="Audio troppo grande (max 25MB)")
+        chunks.append(chunk)
+    content = b"".join(chunks)
+
+    suffix = "." + (audio.filename or "audio.webm").rsplit(".", 1)[-1]
+    tmp_path = None
     try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+            tmp.write(content)
+            tmp_path = tmp.name
+
         stt = OpenAISpeechToText(api_key=api_key)
         with open(tmp_path, "rb") as fh:
             response = await stt.transcribe(
@@ -191,13 +207,16 @@ async def api_transcribe(
             )
         text = getattr(response, "text", None) or ""
         return {"text": text, "language": language}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Whisper error: {e}") from e
     finally:
-        try:
-            os.unlink(tmp_path)
-        except OSError:
-            pass
+        if tmp_path:
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
 
 
 app.include_router(api_router)
