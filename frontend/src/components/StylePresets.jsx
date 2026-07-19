@@ -13,7 +13,7 @@ export const STYLE_PRESETS = [
   { id: "luxury", label: "Luxury Editorial", icon: Gem, modifier: "estetica luxury editoriale, tipografia raffinata, palette monocromatica sofisticata" },
 ];
 
-export const StylePresets = ({ active, onChange }) => {
+export const StylePresets = ({ active, onChange, compact = false }) => {
   const toggle = (id) => {
     if (active.includes(id)) onChange(active.filter((s) => s !== id));
     else onChange([...active, id]);
@@ -25,9 +25,11 @@ export const StylePresets = ({ active, onChange }) => {
       className="w-full max-w-4xl mx-auto px-4 pt-2 pb-1"
     >
       <div className="flex items-center gap-1.5 overflow-x-auto pb-1 -mx-1 px-1">
-        <span className="font-mono text-[10px] uppercase tracking-widest text-slate-500 shrink-0 mr-1">
-          Stili
-        </span>
+        {!compact && (
+          <span className="font-mono text-[10px] uppercase tracking-widest text-slate-500 shrink-0 mr-1">
+            Stili
+          </span>
+        )}
         {STYLE_PRESETS.map(({ id, label, icon: Icon }) => {
           const on = active.includes(id);
           return (
@@ -35,14 +37,15 @@ export const StylePresets = ({ active, onChange }) => {
               key={id}
               data-testid={`style-${id}`}
               onClick={() => toggle(id)}
-              className={`shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-mono text-[11px] border transition-colors duration-200 ${
+              title={label}
+              className={`shrink-0 inline-flex items-center gap-1.5 ${compact ? "px-2 py-1" : "px-2.5 py-1"} rounded-full font-mono text-[11px] border transition-colors duration-200 ${
                 on
                   ? "bg-sky-500/15 border-sky-500/40 text-sky-300"
                   : "bg-slate-900/50 border-slate-800 text-slate-400 hover:text-slate-100 hover:border-slate-700"
               }`}
             >
               <Icon strokeWidth={1.5} className="w-3 h-3" />
-              {label}
+              {!compact && label}
             </button>
           );
         })}

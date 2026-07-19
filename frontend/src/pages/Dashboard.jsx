@@ -12,7 +12,9 @@ import { StylePresets, applyStyleModifiers } from "@/components/StylePresets";
 import { RecipesStrip } from "@/components/RecipesStrip";
 import { fetchModels, orchestrateStream, compare, fileToBase64 } from "@/lib/api";
 import { getWeights, getActiveStyles, setActiveStyles } from "@/lib/settings";
-import { Brain, Layers3, GitBranch } from "lucide-react";
+import { Brain, Layers3, GitBranch, ChevronDown, ChevronUp } from "lucide-react";
+
+const SHORTCUTS_COLLAPSED_KEY = "ai4life_shortcuts_collapsed_v1";
 
 export default function Dashboard() {
   const [view, setView] = useState("chat");
@@ -38,6 +40,23 @@ export default function Dashboard() {
   const [activeRecipeId, setActiveRecipeId] = useState(null);
   const [pendingPrompt, setPendingPrompt] = useState(null);
   const [pendingWeightsOverride, setPendingWeightsOverride] = useState(null);
+
+  // Shortcut strips collapse state (icon-only mode). Persist across reloads.
+  // Default: collapsed on mobile (<768px), expanded on desktop.
+  const [shortcutsCollapsed, setShortcutsCollapsedState] = useState(() => {
+    try {
+      const stored = localStorage.getItem(SHORTCUTS_COLLAPSED_KEY);
+      if (stored !== null) return stored === "true";
+    } catch { /* noop */ }
+    return typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches;
+  });
+  const toggleShortcuts = () => {
+    setShortcutsCollapsedState((prev) => {
+      const next = !prev;
+      try { localStorage.setItem(SHORTCUTS_COLLAPSED_KEY, String(next)); } catch { /* noop */ }
+      return next;
+    });
+  };
 
   const applyRecipe = (recipe) => {
     setActiveRecipeId(recipe.id);
@@ -198,8 +217,28 @@ export default function Dashboard() {
                 WebkitBackdropFilter: "blur(24px)",
               }}
             >
-              <RecipesStrip onApply={applyRecipe} activeRecipeId={activeRecipeId} />
-              <StylePresets active={activeStyles} onChange={updateStyles} />
+              <div className="w-full max-w-4xl mx-auto px-4 pt-0 pb-0 flex justify-end">
+                <button
+                  data-testid="toggle-shortcuts-btn"
+                  onClick={toggleShortcuts}
+                  title={shortcutsCollapsed ? "Espandi scorciatoie" : "Comprimi scorciatoie"}
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono uppercase tracking-widest text-slate-500 hover:text-sky-300 hover:bg-slate-800/40 transition-colors"
+                >
+                  {shortcutsCollapsed
+                    ? <><ChevronUp className="w-3 h-3" strokeWidth={2} /> Espandi</>
+                    : <><ChevronDown className="w-3 h-3" strokeWidth={2} /> Comprimi</>}
+                </button>
+              </div>
+              <RecipesStrip
+                onApply={applyRecipe}
+                activeRecipeId={activeRecipeId}
+                compact={shortcutsCollapsed}
+              />
+              <StylePresets
+                active={activeStyles}
+                onChange={updateStyles}
+                compact={shortcutsCollapsed}
+              />
               <PromptDock
                 onSubmit={handleSubmit}
                 busy={busy}
