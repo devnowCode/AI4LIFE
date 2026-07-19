@@ -189,8 +189,15 @@ export default function Dashboard() {
         {view === "archive" && <Archive />}
 
         {view === "chat" && (
-          <div className="sticky bottom-0 left-0 right-0 pointer-events-none">
-            <div className="pointer-events-auto">
+          <div className="sticky bottom-0 left-0 right-0 pointer-events-none z-20">
+            <div
+              className="pointer-events-auto pt-2"
+              style={{
+                background: "linear-gradient(to bottom, rgba(3,7,18,0.4) 0%, rgba(3,7,18,0.9) 12%, rgba(3,7,18,0.98) 30%, rgba(3,7,18,1) 100%)",
+                backdropFilter: "blur(24px)",
+                WebkitBackdropFilter: "blur(24px)",
+              }}
+            >
               <RecipesStrip onApply={applyRecipe} activeRecipeId={activeRecipeId} />
               <StylePresets active={activeStyles} onChange={updateStyles} />
               <PromptDock
@@ -216,7 +223,7 @@ export default function Dashboard() {
 
 const ChatView = ({ entries, busy, onRework, models }) => (
   <div className="flex-1 overflow-y-auto">
-    <div className="max-w-4xl mx-auto px-4 md:px-8 pt-10 pb-4">
+    <div className="max-w-4xl mx-auto px-4 md:px-8 pt-10 pb-56 md:pb-48">
       {entries.length === 0 && !busy && <EmptyState models={models} />}
 
       <div className="space-y-6">
