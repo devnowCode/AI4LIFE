@@ -69,6 +69,8 @@
       "capability_score": 88,
       "latency_index": 96,
       "cost_efficiency": 95,
+      "cost_per_1k_output_tokens_eur": 0.0004,
+      "cost_per_image_eur": 0.0,
       "context_window": 1000000,
       "best_use_case": ["multimodal", "pdf_analysis", "quick_qa", "translation"],
       "tagline": "Ultra-veloce, multimodale, ottimo per file",
