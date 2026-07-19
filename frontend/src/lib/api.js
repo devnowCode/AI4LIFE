@@ -3,10 +3,15 @@ import axios from "axios";
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 export const API = `${BACKEND_URL}/api`;
 
+// Request timeout budgets (ms) — named for clarity
+const DEFAULT_TIMEOUT_MS = 180_000;         // 3 min default axios timeout
+const ORCHESTRATE_TIMEOUT_MS = 240_000;     // 4 min for /orchestrate + /compare (multi-model)
+const TRANSCRIBE_TIMEOUT_MS = 120_000;      // 2 min for Whisper STT
+
 export const api = axios.create({
   baseURL: API,
   headers: { "Content-Type": "application/json" },
-  timeout: 180000,
+  timeout: DEFAULT_TIMEOUT_MS,
 });
 
 export async function fetchModels() {
@@ -15,7 +20,7 @@ export async function fetchModels() {
 }
 
 export async function orchestrate(payload) {
-  const { data } = await api.post("/orchestrate", payload, { timeout: 240000 });
+  const { data } = await api.post("/orchestrate", payload, { timeout: ORCHESTRATE_TIMEOUT_MS });
   return data;
 }
 
@@ -24,14 +29,14 @@ export async function transcribe(audioBlob, language = "it") {
   form.append("audio", audioBlob, "recording.webm");
   form.append("language", language);
   const { data } = await axios.post(`${API}/transcribe`, form, {
-    timeout: 120000,
+    timeout: TRANSCRIBE_TIMEOUT_MS,
     headers: { "Content-Type": "multipart/form-data" },
   });
   return data;
 }
 
 export async function compare(payload) {
-  const { data } = await api.post("/compare", payload, { timeout: 240000 });
+  const { data } = await api.post("/compare", payload, { timeout: ORCHESTRATE_TIMEOUT_MS });
   return data;
 }
 

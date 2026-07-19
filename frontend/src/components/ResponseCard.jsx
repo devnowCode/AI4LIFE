@@ -10,11 +10,14 @@ const Markdown = ({ text }) => {
   return (
     <div className="space-y-3">
       {parts.map((chunk, i) => {
+        // Stable-ish key: index + short content hash. Chunk list order is deterministic
+        // for the same input, so index alone would work, but this survives concurrent renders.
+        const k = `${i}-${chunk.length}-${chunk.charCodeAt(0) || 0}`;
         if (chunk.startsWith("```")) {
           const body = chunk.replace(/^```[a-z]*\n?/, "").replace(/```$/, "");
           return (
             <pre
-              key={i}
+              key={k}
               className="font-mono text-xs bg-slate-950/70 border border-slate-800 rounded-lg p-4 overflow-x-auto text-sky-100/90 leading-relaxed"
             >
               {body}
@@ -22,7 +25,7 @@ const Markdown = ({ text }) => {
           );
         }
         return (
-          <p key={i} className="font-body text-[15px] leading-[1.7] text-slate-200 whitespace-pre-wrap">
+          <p key={k} className="font-body text-[15px] leading-[1.7] text-slate-200 whitespace-pre-wrap">
             {chunk}
           </p>
         );
@@ -59,7 +62,9 @@ export const ResponseCard = ({ entry, onRework }) => {
       try {
         await navigator.share({ title: "AI4LIFE", text: result?.slice(0, 200), url });
         return;
-      } catch { /* fallback below */ }
+      } catch (err) {
+        console.warn("[ResponseCard] Web Share failed, falling back to clipboard:", err);
+      }
     }
     await navigator.clipboard.writeText(`${prompt}\n\n${result}`);
     toast.success("Contenuto copiato per condivisione");
@@ -99,7 +104,7 @@ export const ResponseCard = ({ entry, onRework }) => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4" data-testid="generated-images">
                 {images.map((img, i) => (
                   <a
-                    key={i}
+                    key={img.data_url.slice(-64)}
                     href={img.data_url}
                     download={`ai4life-${i}.png`}
                     className="block rounded-xl overflow-hidden border border-slate-800 hover:border-sky-500/50 transition-colors"

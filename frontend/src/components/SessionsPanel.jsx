@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { listSessions, getSessionMessages, deleteSession } from "@/lib/api";
 import { Clock, Trash2, MessagesSquare } from "lucide-react";
 import { toast } from "sonner";
@@ -6,20 +6,23 @@ import { toast } from "sonner";
 export const SessionsPanel = ({ currentSessionId, onLoadSession, onNewSession, refreshKey }) => {
   const [sessions, setSessions] = useState([]);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     try {
       const s = await listSessions();
       setSessions(s);
-    } catch { /* silent */ }
-  };
+    } catch (err) {
+      console.warn("[SessionsPanel] Failed to load sessions:", err);
+    }
+  }, []);
 
-  useEffect(() => { load(); }, [refreshKey]);
+  useEffect(() => { load(); }, [refreshKey, load]);
 
   const openSession = async (id) => {
     try {
       const msgs = await getSessionMessages(id);
       onLoadSession(id, msgs);
-    } catch (e) {
+    } catch (err) {
+      console.warn("[SessionsPanel] Failed to open session:", err);
       toast.error("Errore caricamento sessione");
     }
   };

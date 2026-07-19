@@ -150,6 +150,8 @@ async def _run_image_gen(selected: dict[str, Any], prompt: str, parsed_files: li
                 pass
 
     msg = UserMessage(text=prompt or "Genera un'immagine.", file_contents=ref_images or None)
+    text_out: str = ""
+    images_out: list[dict[str, Any]] = []
     try:
         text_out, images_out = await chat.send_message_multimodal_response(msg)
     except Exception as e:

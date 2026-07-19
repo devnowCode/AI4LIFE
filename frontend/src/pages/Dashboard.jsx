@@ -48,7 +48,9 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
-    fetchModels().then((r) => setModels(r.models)).catch(() => {});
+    fetchModels()
+      .then((r) => setModels(r.models))
+      .catch((err) => console.warn("[Dashboard] Failed to fetch models:", err));
   }, []);
 
   const bumpSessions = () => setSessionsRefresh((n) => n + 1);

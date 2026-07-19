@@ -27,7 +27,7 @@ export const CompareCard = ({ prompt, results }) => (
         : "grid-cols-1 md:grid-cols-2"
     }`}>
       {results?.map((r, i) => (
-        <CompareCell key={r.model_id + i} cell={r} isLast={i === results.length - 1} />
+        <CompareCell key={r.model_id} cell={r} isLast={i === results.length - 1} />
       ))}
     </div>
   </article>
@@ -61,7 +61,7 @@ const CompareCell = ({ cell, isLast }) => {
       {hasImages && (
         <div className="mb-3 space-y-2">
           {response.images.map((img, i) => (
-            <img key={i} src={img.data_url} alt="" className="w-full rounded-lg border border-slate-800" />
+            <img key={img.data_url.slice(-64)} src={img.data_url} alt={`compare-${i}`} className="w-full rounded-lg border border-slate-800" />
           ))}
         </div>
       )}

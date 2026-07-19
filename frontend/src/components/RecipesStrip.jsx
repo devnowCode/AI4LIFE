@@ -13,7 +13,9 @@ export const RecipesStrip = ({ onApply, activeRecipeId }) => {
   const [recipes, setRecipes] = useState([]);
 
   useEffect(() => {
-    api.get("/recipes").then(({ data }) => setRecipes(data.recipes || [])).catch(() => {});
+    api.get("/recipes")
+      .then(({ data }) => setRecipes(data.recipes || []))
+      .catch((err) => console.warn("[RecipesStrip] Failed to load recipes:", err));
   }, []);
 
   if (recipes.length === 0) return null;

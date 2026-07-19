@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { Paperclip, ArrowUp, X, FileText, Image as ImageIcon, GitCompareArrows } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { VoiceButton } from "./VoiceButton";
@@ -19,6 +19,12 @@ export const PromptDock = ({
   const [text, setText] = useState("");
   const [files, setFiles] = useState([]);
   const fileRef = useRef(null);
+
+  // Memoize the filtered text-model list so it's not recomputed on every render
+  const textModels = useMemo(
+    () => (models || []).filter((m) => m.type === "text"),
+    [models]
+  );
 
   // When a recipe is applied, replace the prompt input
   useEffect(() => {
@@ -63,7 +69,7 @@ export const PromptDock = ({
           <span className="font-mono text-[10px] uppercase tracking-widest text-sky-400/80 mr-1">
             Compare:
           </span>
-          {(models || []).filter((m) => m.type === "text").map((m) => {
+          {textModels.map((m) => {
             const on = compareModels.includes(m.id);
             return (
               <button
@@ -91,7 +97,7 @@ export const PromptDock = ({
           <div className="flex flex-wrap gap-2 mb-3">
             {files.map((f, i) => (
               <div
-                key={i}
+                key={`${f.name}-${f.size}-${f.lastModified || i}`}
                 data-testid={`file-chip-${i}`}
                 className="flex items-center gap-2 px-2.5 py-1 rounded-md bg-slate-800/60 border border-slate-700/50 text-xs font-mono text-slate-300"
               >

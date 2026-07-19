@@ -10,10 +10,10 @@ export const Telemetry = () => {
     let mounted = true;
     const load = async () => {
       try {
-        const { data } = await api.get("/telemetry");
-        if (mounted) setData(data);
-      } catch (e) {
-        if (mounted) setErr(String(e));
+        const res = await api.get("/telemetry");
+        if (mounted) setData(res.data);
+      } catch (err) {
+        if (mounted) setErr(String(err));
       }
     };
     load();
@@ -97,7 +97,7 @@ export const Telemetry = () => {
             </thead>
             <tbody>
               {recent.slice(0, 12).map((r, i) => (
-                <tr key={i} className="border-b border-slate-800/40" data-testid={`recent-row-${i}`}>
+                <tr key={`${r.created_at_ts}-${r.model_id}`} className="border-b border-slate-800/40" data-testid={`recent-row-${i}`}>
                   <td className="px-3 py-2 font-mono text-[10px] text-slate-500">
                     {new Date(r.created_at).toLocaleTimeString("it-IT")}
                   </td>
