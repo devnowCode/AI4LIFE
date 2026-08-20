@@ -30,8 +30,12 @@ next-env.d.ts
 dist/
 dist
 
-# Environment files (comprehensive coverage)
-
+# Environment files (comprehensive coverage — NEVER commit secrets)
+.env
+.env.*
+!.env.example
+backend/.env
+frontend/.env
 *token.json*
 *credentials.json*
 
@@ -60,6 +64,18 @@ chainlit.md
 
 # Deployment
 .vercel
+
+# AI4LIFE-specific
+test_reports/
+.emergent/
+/tmp/ai4life_*
+.screenshots/
+
+# Runtime data
+backend/uploads/
+backend/temp/
+*.log
+supervisord.log*
 
 # Data and databases
 agenthub/agents/youtube/db
